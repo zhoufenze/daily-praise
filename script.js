@@ -68,51 +68,63 @@ function getAnalyticsConfig() {
   return window.DAILY_PRAISE_ANALYTICS || {};
 }
 
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    const script = document.createElement("script");
+function getDistinctId() {
+  const storageKey = "daily_praise_distinct_id";
+  const existingId = window.localStorage.getItem(storageKey);
 
-    script.async = true;
-    script.src = src;
-    script.onload = resolve;
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
+  if (existingId) {
+    return existingId;
+  }
+
+  const nextId = crypto.randomUUID
+    ? crypto.randomUUID()
+    : `daily-praise-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  window.localStorage.setItem(storageKey, nextId);
+  return nextId;
 }
 
-function getPostHogAssetHost(apiHost) {
-  return apiHost
-    .replace("https://us.i.posthog.com", "https://us-assets.i.posthog.com")
-    .replace("https://eu.i.posthog.com", "https://eu-assets.i.posthog.com");
-}
-
-async function initPostHog() {
+function capturePostHogEvent(name, properties) {
   const config = getAnalyticsConfig().posthog;
 
   if (!config?.enabled || !config.projectApiKey || !config.apiHost) {
     return;
   }
 
-  try {
-    const assetHost = getPostHogAssetHost(config.apiHost);
+  const eventBody = JSON.stringify({
+    api_key: config.projectApiKey,
+    event: name,
+    properties: {
+      distinct_id: getDistinctId(),
+      $current_url: window.location.href,
+      $host: window.location.host,
+      $pathname: window.location.pathname,
+      ...properties
+    }
+  });
 
-    await loadScript(`${assetHost}/static/array.js`);
-    window.posthog?.init(config.projectApiKey, {
-      api_host: config.apiHost,
-      capture_pageview: false,
-      autocapture: false,
-      person_profiles: "identified_only"
-    });
-  } catch (error) {
+  if (navigator.sendBeacon) {
+    navigator.sendBeacon(`${config.apiHost}/capture/`, eventBody);
+    return;
+  }
+
+  fetch(`${config.apiHost}/capture/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: eventBody,
+    keepalive: true
+  }).catch((error) => {
     window.dispatchEvent(
       new CustomEvent("dailyPraiseAnalyticsError", {
         detail: {
           provider: "posthog",
-          message: error instanceof Error ? error.message : "PostHog failed to load"
+          message: error instanceof Error ? error.message : "PostHog capture failed"
         }
       })
     );
-  }
+  });
 }
 
 function trackEvent(name, details = {}) {
@@ -125,7 +137,7 @@ function trackEvent(name, details = {}) {
 
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push(payload);
-  window.posthog?.capture(name, payload);
+  capturePostHogEvent(name, payload);
   window.dispatchEvent(new CustomEvent("dailyPraiseAnalytics", { detail: payload }));
 }
 
@@ -197,8 +209,7 @@ styleButtons.forEach((button) => {
   });
 });
 
-async function initApp() {
-  await initPostHog();
+function initApp() {
   setTodayLabel();
   trackEvent("page_view");
   renderPraise(activeStyle);
