@@ -103,11 +103,6 @@ function capturePostHogEvent(name, properties) {
     }
   });
 
-  if (navigator.sendBeacon) {
-    navigator.sendBeacon(`${config.apiHost}/capture/`, eventBody);
-    return;
-  }
-
   fetch(`${config.apiHost}/capture/`, {
     method: "POST",
     headers: {
@@ -116,6 +111,10 @@ function capturePostHogEvent(name, properties) {
     body: eventBody,
     keepalive: true
   }).catch((error) => {
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(`${config.apiHost}/capture/`, eventBody);
+    }
+
     window.dispatchEvent(
       new CustomEvent("dailyPraiseAnalyticsError", {
         detail: {
