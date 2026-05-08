@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Daily Praise gives you a small, sincere compliment whenever you need a little lift."
+    />
+    <title>Daily Praise</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="app-shell" aria-labelledby="app-title">
+      <div class="glow" aria-hidden="true"></div>
+
+      <header class="topbar">
+        <a class="brand" href="./index.html" aria-label="Daily Praise home">
+          <span class="brand-mark" aria-hidden="true">D</span>
+          <span>
+            <h1 id="app-title">Daily Praise</h1>
+            <span class="subtitle">A tiny compliment for your day.</span>
+          </span>
+        </a>
+
+        <div class="date-pill" aria-label="Today">
+          <span class="dot" aria-hidden="true"></span>
+          <span id="todayLabel">Today</span>
+        </div>
+      </header>
+
+      <section class="hero" aria-live="polite">
+        <article class="praise-card" id="praiseCard">
+          <span class="sparkle sparkle-one" aria-hidden="true"></span>
+          <span class="sparkle sparkle-two" aria-hidden="true"></span>
+
+          <div class="style-tag">
+            <span class="dot" aria-hidden="true"></span>
+            <span id="styleLabel">Warm style</span>
+          </div>
+
+          <p class="quote" id="quoteText"></p>
+
+          <div class="source-row">
+            <span class="source">Today's small lift</span>
+            <div class="mini-meter" aria-hidden="true">
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <footer class="controls" aria-label="Praise controls">
+        <button
+          class="primary-button"
+          id="nextButton"
+          type="button"
+          data-analytics-event="praise_next_click"
+        >
+          <span class="button-icon" aria-hidden="true">+</span>
+          Another one
+        </button>
+
+        <div class="style-switcher" role="group" aria-label="Choose praise style">
+          <button
+            class="chip active"
+            type="button"
+            data-style="warm"
+            data-analytics-event="praise_style_click"
+            aria-pressed="true"
+          >
+            Warm
+          </button>
+          <button
+            class="chip"
+            type="button"
+            data-style="professional"
+            data-analytics-event="praise_style_click"
+            aria-pressed="false"
+          >
+            Pro
+          </button>
+          <button
+            class="chip"
+            type="button"
+            data-style="funny"
+            data-analytics-event="praise_style_click"
+            aria-pressed="false"
+          >
+            Funny
+          </button>
+          <button
+            class="chip"
+            type="button"
+            data-style="smart"
+            data-analytics-event="praise_style_click"
+            aria-pressed="false"
+          >
+            Smart
+          </button>
+        </div>
+      </footer>
+    </main>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
