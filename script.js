@@ -64,6 +64,57 @@ let activeStyle = "warm";
 let lastLine = "";
 let praiseCount = 0;
 
+function getAnalyticsConfig() {
+  return window.DAILY_PRAISE_ANALYTICS || {};
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+
+    script.async = true;
+    script.src = src;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+
+function getPostHogAssetHost(apiHost) {
+  return apiHost
+    .replace("https://us.i.posthog.com", "https://us-assets.i.posthog.com")
+    .replace("https://eu.i.posthog.com", "https://eu-assets.i.posthog.com");
+}
+
+async function initPostHog() {
+  const config = getAnalyticsConfig().posthog;
+
+  if (!config?.enabled || !config.projectApiKey || !config.apiHost) {
+    return;
+  }
+
+  try {
+    const assetHost = getPostHogAssetHost(config.apiHost);
+
+    await loadScript(`${assetHost}/static/array.js`);
+    window.posthog?.init(config.projectApiKey, {
+      api_host: config.apiHost,
+      capture_pageview: false,
+      autocapture: false,
+      person_profiles: "identified_only"
+    });
+  } catch (error) {
+    window.dispatchEvent(
+      new CustomEvent("dailyPraiseAnalyticsError", {
+        detail: {
+          provider: "posthog",
+          message: error instanceof Error ? error.message : "PostHog failed to load"
+        }
+      })
+    );
+  }
+}
+
 function trackEvent(name, details = {}) {
   const payload = {
     event: name,
@@ -74,6 +125,7 @@ function trackEvent(name, details = {}) {
 
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push(payload);
+  window.posthog?.capture(name, payload);
   window.dispatchEvent(new CustomEvent("dailyPraiseAnalytics", { detail: payload }));
 }
 
@@ -145,6 +197,11 @@ styleButtons.forEach((button) => {
   });
 });
 
-setTodayLabel();
-trackEvent("page_view");
-renderPraise(activeStyle);
+async function initApp() {
+  await initPostHog();
+  setTodayLabel();
+  trackEvent("page_view");
+  renderPraise(activeStyle);
+}
+
+initApp();

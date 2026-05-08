@@ -463,7 +463,8 @@ h1 {
 
   .quote {
     margin: 22px 0 28px;
-    font-size: clamp(32px, 10vw, 42px);
+    max-width: 260px;
+    font-size: clamp(26px, 7.6vw, 30px);
     line-height: 1.06;
   }
 

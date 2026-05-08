@@ -67,19 +67,28 @@ Payload:
 
 ## Current Implementation
 
-The MVP does not send data to a real analytics service yet.
+The MVP is ready for PostHog Free.
 
-Events are pushed into `window.dataLayer` and also emitted through a browser event named `dailyPraiseAnalytics`.
+Events are pushed into `window.dataLayer`, emitted through a browser event named `dailyPraiseAnalytics`, and sent to PostHog when PostHog is enabled in `analytics-config.js`.
 
-This keeps the MVP privacy-friendly and dependency-free while making future integration simple.
+PostHog is disabled by default until a project API key is added.
 
-## Future Integration Options
+## Enable PostHog
 
-The `trackEvent` function in `script.js` can later be connected to:
+Create a PostHog project, then copy the project API key and host into `analytics-config.js`:
 
-- Google Analytics
-- PostHog
-- Plausible
-- Baidu Analytics
-- A custom backend endpoint
+```js
+window.DAILY_PRAISE_ANALYTICS = {
+  posthog: {
+    enabled: true,
+    projectApiKey: "YOUR_POSTHOG_PROJECT_API_KEY",
+    apiHost: "https://us.i.posthog.com"
+  }
+};
+```
 
+Use `https://eu.i.posthog.com` instead if the PostHog project is hosted in the EU region.
+
+## Privacy Notes
+
+The current implementation disables PostHog autocapture and sends only the explicit product events listed above.
