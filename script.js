@@ -1,54 +1,106 @@
 const praiseLibrary = {
   warm: {
-    label: "Warm style",
-    lines: [
-      "You make ordinary moments feel quietly brighter.",
-      "You bring a steady kind of good energy.",
-      "Your presence makes people feel a little more at ease.",
-      "You have a gentle way of making the day feel lighter.",
-      "People feel safe being themselves around you.",
-      "You add warmth without even trying too hard.",
-      "Your kindness has a calm kind of strength.",
-      "You make small moments feel worth noticing."
+    label: "温暖型",
+    items: [
+      {
+        id: "warm-morning-01",
+        praise: "你已经很努力了，今天值得被温柔地肯定。",
+        musicTitle: "Morning Light",
+        musicMood: "轻柔、明亮、像早晨第一口热茶",
+        musicFile: "./music/morning-light.wav"
+      },
+      {
+        id: "warm-sunny-02",
+        praise: "你身上有一种让人安心的力量，靠近你会觉得世界慢了一点。",
+        musicTitle: "Sunny Walk",
+        musicMood: "轻快、舒展、适合重新出发",
+        musicFile: "./music/sunny-walk.wav"
+      },
+      {
+        id: "warm-spark-03",
+        praise: "你把平凡的一天照顾得很好，这本身就很了不起。",
+        musicTitle: "Gentle Spark",
+        musicMood: "柔和、闪亮、带一点小小期待",
+        musicFile: "./music/gentle-spark.wav"
+      }
     ]
   },
   professional: {
-    label: "Professional style",
-    lines: [
-      "Your clarity helps people trust the next step.",
-      "You make complex things feel easier to understand.",
-      "Your professionalism shows up in the details.",
-      "You have a reliable way of bringing order to busy moments.",
-      "People can feel the care behind your work.",
-      "Your focus makes the whole conversation more useful.",
-      "You communicate with a confidence that feels grounded.",
-      "You make progress feel practical and possible."
+    label: "专业型",
+    items: [
+      {
+        id: "pro-clear-01",
+        praise: "你的表达很清楚，让复杂的事情也变得可以推进。",
+        musicTitle: "Clear Steps",
+        musicMood: "清爽、稳定、适合专注前进",
+        musicFile: "./music/clear-steps.wav"
+      },
+      {
+        id: "pro-start-02",
+        praise: "你做事有分寸，也有判断力，这会让人很自然地信任你。",
+        musicTitle: "Fresh Start",
+        musicMood: "利落、轻盈、带一点行动感",
+        musicFile: "./music/fresh-start.wav"
+      },
+      {
+        id: "pro-confidence-03",
+        praise: "你的可靠不是靠声音变大，而是靠每个细节都站得住。",
+        musicTitle: "Soft Confidence",
+        musicMood: "温和、自信、节奏不紧不慢",
+        musicFile: "./music/soft-confidence.wav"
+      }
     ]
   },
   funny: {
-    label: "Funny style",
-    lines: [
-      "You are basically a mood upgrade with shoes.",
-      "Your good energy deserves its own tiny parade.",
-      "You make awkward moments file a formal complaint and leave.",
-      "Your charm has excellent timing.",
-      "You are proof that useful and delightful can share a desk.",
-      "You bring the kind of vibe coffee wishes it had.",
-      "Your brain has a surprisingly good user interface.",
-      "You make today feel less like a Monday, even when it is one."
+    label: "幽默型",
+    items: [
+      {
+        id: "funny-bounce-01",
+        praise: "你今天的状态像给空气加了点糖，连路过的烦恼都想绕路。",
+        musicTitle: "Smile Bounce",
+        musicMood: "俏皮、轻快、带着笑意",
+        musicFile: "./music/smile-bounce.wav"
+      },
+      {
+        id: "funny-parade-02",
+        praise: "你这种好能量，建议申请一个小型庆祝仪式。",
+        musicTitle: "Tiny Parade",
+        musicMood: "活泼、跳跃、有一点庆祝感",
+        musicFile: "./music/tiny-parade.wav"
+      },
+      {
+        id: "funny-walk-03",
+        praise: "你不只是把事情做好，还顺手把气氛调亮了。",
+        musicTitle: "Sunny Walk",
+        musicMood: "明朗、松弛、适合轻松一下",
+        musicFile: "./music/sunny-walk.wav"
+      }
     ]
   },
   smart: {
-    label: "Emotionally smart style",
-    lines: [
-      "You notice the feeling underneath the words.",
-      "You have a rare talent for making people feel respected.",
-      "Your listening turns conversations into calmer places.",
-      "You respond with care, not just speed.",
-      "You understand people in a way that makes trust easier.",
-      "You know how to be honest without making things harsh.",
-      "Your empathy has structure, and that is powerful.",
-      "You help people feel seen without putting them on the spot."
+    label: "高情商型",
+    items: [
+      {
+        id: "smart-spark-01",
+        praise: "你很会照顾别人的感受，而且不会丢掉自己的边界。",
+        musicTitle: "Gentle Spark",
+        musicMood: "温柔、克制、心里有光",
+        musicFile: "./music/gentle-spark.wav"
+      },
+      {
+        id: "smart-light-02",
+        praise: "你能听见话里的情绪，这是一种很珍贵的能力。",
+        musicTitle: "Morning Light",
+        musicMood: "干净、柔软、像被认真理解",
+        musicFile: "./music/morning-light.wav"
+      },
+      {
+        id: "smart-confidence-03",
+        praise: "你说话让人舒服，不是因为讨好，而是因为真诚又有尺度。",
+        musicTitle: "Soft Confidence",
+        musicMood: "平和、笃定、适合慢慢变好",
+        musicFile: "./music/soft-confidence.wav"
+      }
     ]
   }
 };
@@ -59,10 +111,21 @@ const praiseCard = document.querySelector("#praiseCard");
 const nextButton = document.querySelector("#nextButton");
 const todayLabel = document.querySelector("#todayLabel");
 const styleButtons = Array.from(document.querySelectorAll("[data-style]"));
+const musicButton = document.querySelector("#musicButton");
+const musicButtonIcon = document.querySelector("#musicButtonIcon");
+const musicPlayer = document.querySelector("#musicPlayer");
+const musicTitle = document.querySelector("#musicTitle");
+const musicMood = document.querySelector("#musicMood");
+
+const allPraiseItems = Object.entries(praiseLibrary).flatMap(([style, group]) =>
+  group.items.map((item, index) => ({ ...item, style, styleIndex: index }))
+);
 
 let activeStyle = "warm";
-let lastLine = "";
+let activeItem = null;
+let activeStyleIndex = 0;
 let praiseCount = 0;
+let isMusicPlaying = false;
 
 function getAnalyticsConfig() {
   return window.DAILY_PRAISE_ANALYTICS || {};
@@ -129,7 +192,7 @@ function capturePostHogEvent(name, properties) {
 function trackEvent(name, details = {}) {
   const payload = {
     event: name,
-    page: "daily_praise_mvp",
+    page: "kuakua_v2",
     timestamp: new Date().toISOString(),
     ...details
   };
@@ -140,50 +203,127 @@ function trackEvent(name, details = {}) {
   window.dispatchEvent(new CustomEvent("dailyPraiseAnalytics", { detail: payload }));
 }
 
-function pickPraise(style) {
-  const lines = praiseLibrary[style].lines;
-  const availableLines = lines.filter((line) => line !== lastLine);
-  const source = availableLines.length > 0 ? availableLines : lines;
-  const index = Math.floor(Math.random() * source.length);
-
-  return source[index];
+function getDateKey() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
-function renderPraise(style) {
-  const praise = pickPraise(style);
-
-  lastLine = praise;
-  praiseCount += 1;
-  styleLabel.textContent = praiseLibrary[style].label;
-  quoteText.textContent = praise;
-
-  praiseCard.classList.remove("refreshing");
-  void praiseCard.offsetWidth;
-  praiseCard.classList.add("refreshing");
-
-  trackEvent("praise_impression", {
-    style,
-    praiseText: praise,
-    praiseIndex: praiseCount
-  });
+function hashString(value) {
+  return Array.from(value).reduce((hash, char) => {
+    return (hash * 31 + char.charCodeAt(0)) >>> 0;
+  }, 7);
 }
 
-function setActiveStyle(style) {
-  activeStyle = style;
+function getDailyItem() {
+  const dailyIndex = hashString(getDateKey()) % allPraiseItems.length;
+  return allPraiseItems[dailyIndex];
+}
 
+function getDailyStyleIndex(style) {
+  const items = praiseLibrary[style].items;
+  return hashString(`${getDateKey()}-${style}`) % items.length;
+}
+
+function getItemByStyleIndex(style, index) {
+  const item = praiseLibrary[style].items[index];
+  return { ...item, style, styleIndex: index };
+}
+
+function setStyleButtonState(style) {
   styleButtons.forEach((button) => {
     const isActive = button.dataset.style === style;
     button.classList.toggle("active", isActive);
     button.setAttribute("aria-pressed", String(isActive));
   });
+}
 
-  renderPraise(style);
+function updateMusicButton() {
+  musicButtonIcon.textContent = isMusicPlaying ? "Ⅱ" : "▶";
+  musicButton.setAttribute("aria-label", isMusicPlaying ? "暂停音乐" : "播放音乐");
+  musicButton.dataset.analyticsEvent = isMusicPlaying ? "music_pause_click" : "music_play_click";
+  praiseCard.classList.toggle("is-playing", isMusicPlaying);
+}
+
+function playCurrentMusic() {
+  isMusicPlaying = true;
+  updateMusicButton();
+
+  const playPromise = musicPlayer.play();
+
+  if (playPromise) {
+    playPromise.catch(() => {
+      isMusicPlaying = false;
+      updateMusicButton();
+    });
+  }
+}
+
+function pauseCurrentMusic() {
+  musicPlayer.pause();
+  isMusicPlaying = false;
+  updateMusicButton();
+}
+
+function renderPraise(item, reason = "render") {
+  const previousItem = activeItem;
+
+  activeItem = item;
+  activeStyle = item.style;
+  activeStyleIndex = item.styleIndex;
+  praiseCount += 1;
+
+  styleLabel.textContent = praiseLibrary[item.style].label;
+  quoteText.textContent = item.praise;
+  musicTitle.textContent = item.musicTitle;
+  musicMood.textContent = item.musicMood;
+
+  const shouldResumeMusic = isMusicPlaying;
+  musicPlayer.src = item.musicFile;
+  musicPlayer.load();
+
+  if (shouldResumeMusic) {
+    playCurrentMusic();
+  }
+
+  setStyleButtonState(item.style);
+
+  praiseCard.classList.remove("refreshing");
+  void praiseCard.offsetWidth;
+  praiseCard.classList.add("refreshing");
+
+  if (previousItem && previousItem.musicFile !== item.musicFile) {
+    trackEvent("music_change", {
+      fromMusicTitle: previousItem.musicTitle,
+      toMusicTitle: item.musicTitle,
+      fromMusicFile: previousItem.musicFile,
+      toMusicFile: item.musicFile,
+      reason
+    });
+  }
+
+  trackEvent("praise_impression", {
+    style: item.style,
+    praiseId: item.id,
+    praiseText: item.praise,
+    praiseIndex: praiseCount,
+    musicTitle: item.musicTitle,
+    musicFile: item.musicFile,
+    reason
+  });
+}
+
+function setActiveStyle(style) {
+  const styleIndex = getDailyStyleIndex(style);
+  renderPraise(getItemByStyleIndex(style, styleIndex), "style_change");
 }
 
 function setTodayLabel() {
-  const formatter = new Intl.DateTimeFormat("en-US", {
+  const formatter = new Intl.DateTimeFormat("zh-CN", {
     weekday: "long",
-    month: "short",
+    month: "long",
     day: "numeric"
   });
 
@@ -191,27 +331,58 @@ function setTodayLabel() {
 }
 
 nextButton.addEventListener("click", () => {
+  const previousItem = activeItem;
+  const nextIndex = (activeStyleIndex + 1) % praiseLibrary[activeStyle].items.length;
+
   trackEvent(nextButton.dataset.analyticsEvent, {
     style: activeStyle,
-    previousPraiseText: lastLine
+    previousPraiseId: previousItem?.id,
+    previousPraiseText: previousItem?.praise,
+    previousMusicTitle: previousItem?.musicTitle,
+    nextStyleIndex: nextIndex
   });
-  renderPraise(activeStyle);
+
+  renderPraise(getItemByStyleIndex(activeStyle, nextIndex), "next_click");
 });
 
 styleButtons.forEach((button) => {
   button.addEventListener("click", () => {
+    const nextStyle = button.dataset.style;
+
     trackEvent(button.dataset.analyticsEvent, {
       fromStyle: activeStyle,
-      toStyle: button.dataset.style
+      toStyle: nextStyle,
+      previousPraiseId: activeItem?.id
     });
-    setActiveStyle(button.dataset.style);
+
+    setActiveStyle(nextStyle);
+  });
+});
+
+musicButton.addEventListener("click", () => {
+  const eventName = musicButton.dataset.analyticsEvent;
+
+  if (isMusicPlaying) {
+    pauseCurrentMusic();
+  } else {
+    playCurrentMusic();
+  }
+
+  trackEvent(eventName, {
+    style: activeStyle,
+    praiseId: activeItem?.id,
+    musicTitle: activeItem?.musicTitle,
+    musicFile: activeItem?.musicFile
   });
 });
 
 function initApp() {
   setTodayLabel();
-  trackEvent("page_view");
-  renderPraise(activeStyle);
+  trackEvent("page_view", {
+    dateKey: getDateKey()
+  });
+  renderPraise(getDailyItem(), "daily_default");
+  updateMusicButton();
 }
 
 initApp();

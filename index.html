@@ -1,13 +1,13 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Daily Praise gives you a small, sincere compliment whenever you need a little lift."
+      content="夸夸每天送你一句中文赞美和一首轻快音乐，给今天一点轻轻的能量。"
     />
-    <title>Daily Praise</title>
+    <title>夸夸</title>
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
@@ -15,17 +15,17 @@
       <div class="glow" aria-hidden="true"></div>
 
       <header class="topbar">
-        <a class="brand" href="./index.html" aria-label="Daily Praise home">
-          <span class="brand-mark" aria-hidden="true">D</span>
+        <a class="brand" href="./index.html" aria-label="夸夸首页">
+          <span class="brand-mark" aria-hidden="true">夸</span>
           <span>
-            <h1 id="app-title">Daily Praise</h1>
-            <span class="subtitle">A tiny compliment for your day.</span>
+            <h1 id="app-title">夸夸</h1>
+            <span class="subtitle">给今天一点轻轻的能量</span>
           </span>
         </a>
 
-        <div class="date-pill" aria-label="Today">
+        <div class="date-pill" aria-label="今天">
           <span class="dot" aria-hidden="true"></span>
-          <span id="todayLabel">Today</span>
+          <span id="todayLabel">今天</span>
         </div>
       </header>
 
@@ -36,14 +36,27 @@
 
           <div class="style-tag">
             <span class="dot" aria-hidden="true"></span>
-            <span id="styleLabel">Warm style</span>
+            <span id="styleLabel">温暖型</span>
           </div>
 
           <p class="quote" id="quoteText"></p>
 
-          <div class="source-row">
-            <span class="source">Today's small lift</span>
-            <div class="mini-meter" aria-hidden="true">
+          <div class="music-panel">
+            <button
+              class="music-button"
+              id="musicButton"
+              type="button"
+              data-analytics-event="music_play_click"
+              aria-label="播放音乐"
+            >
+              <span id="musicButtonIcon" aria-hidden="true">▶</span>
+            </button>
+            <div class="music-copy">
+              <span class="music-label">今日轻音乐</span>
+              <strong id="musicTitle"></strong>
+              <span id="musicMood"></span>
+            </div>
+            <div class="music-wave" aria-hidden="true">
               <span></span>
               <span></span>
               <span></span>
@@ -51,21 +64,23 @@
               <span></span>
             </div>
           </div>
+
+          <audio id="musicPlayer" preload="metadata" loop></audio>
         </article>
       </section>
 
-      <footer class="controls" aria-label="Praise controls">
+      <footer class="controls" aria-label="夸夸控制区">
         <button
           class="primary-button"
           id="nextButton"
           type="button"
           data-analytics-event="praise_next_click"
         >
-          <span class="button-icon" aria-hidden="true">+</span>
-          Another one
+          <span class="button-icon" aria-hidden="true">↻</span>
+          换一句
         </button>
 
-        <div class="style-switcher" role="group" aria-label="Choose praise style">
+        <div class="style-switcher" role="group" aria-label="选择赞美风格">
           <button
             class="chip active"
             type="button"
@@ -73,7 +88,7 @@
             data-analytics-event="praise_style_click"
             aria-pressed="true"
           >
-            Warm
+            温暖
           </button>
           <button
             class="chip"
@@ -82,7 +97,7 @@
             data-analytics-event="praise_style_click"
             aria-pressed="false"
           >
-            Pro
+            专业
           </button>
           <button
             class="chip"
@@ -91,7 +106,7 @@
             data-analytics-event="praise_style_click"
             aria-pressed="false"
           >
-            Funny
+            幽默
           </button>
           <button
             class="chip"
@@ -100,7 +115,7 @@
             data-analytics-event="praise_style_click"
             aria-pressed="false"
           >
-            Smart
+            高情商
           </button>
         </div>
       </footer>
