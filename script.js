@@ -132,6 +132,7 @@ const loginSuccess = document.querySelector("#loginSuccess");
 const loginSuccessTitle = document.querySelector("#loginSuccessTitle");
 const loginSuccessText = document.querySelector("#loginSuccessText");
 const loginContinueButton = document.querySelector("#loginContinueButton");
+const statusToast = document.querySelector("#statusToast");
 
 const allPraiseItems = Object.entries(praiseLibrary).flatMap(([style, group]) =>
   group.items.map((item, index) => ({ ...item, style, styleIndex: index }))
@@ -158,6 +159,7 @@ let activeStyleIndex = 0;
 let praiseCount = 0;
 let isMusicPlaying = false;
 let isNextLoading = false;
+let statusToastTimer = 0;
 
 function getAnalyticsConfig() {
   return window.DAILY_PRAISE_ANALYTICS || {};
@@ -682,6 +684,21 @@ function closeLoginModal(reason = "manual") {
   trackEvent("login_prompt_close", { reason });
 }
 
+function showStatusToast(message, type = "info") {
+  if (!statusToast) {
+    return;
+  }
+
+  window.clearTimeout(statusToastTimer);
+  statusToast.textContent = message;
+  statusToast.hidden = false;
+  statusToast.classList.toggle("is-success", type === "success");
+  statusToast.classList.toggle("is-error", type === "error");
+  statusToastTimer = window.setTimeout(() => {
+    statusToast.hidden = true;
+  }, 3200);
+}
+
 function setLoginMessage(message, isSuccess = false) {
   loginMessage.textContent = message;
   loginMessage.classList.toggle("is-success", isSuccess);
@@ -690,14 +707,30 @@ function setLoginMessage(message, isSuccess = false) {
 function resetLoginSuccessState() {
   loginForm.hidden = false;
   authModeButton.hidden = false;
-  loginSuccess.hidden = true;
-  loginSuccessTitle.textContent = "";
-  loginSuccessText.textContent = "";
+  if (loginSuccess) {
+    loginSuccess.hidden = true;
+  }
+  if (loginSuccessTitle) {
+    loginSuccessTitle.textContent = "";
+  }
+  if (loginSuccessText) {
+    loginSuccessText.textContent = "";
+  }
 }
 
 function showLoginSuccessState(authMode, quota, bonusResult) {
   const totalRemaining = getTotalRemaining(quota);
   const hasNewBonus = Boolean(bonusResult?.granted);
+
+  showStatusToast(
+    authMode === "register" ? "注册成功，已登录。" : "登录成功，可以继续被夸了。",
+    "success"
+  );
+
+  if (!loginSuccess || !loginSuccessTitle || !loginSuccessText || !loginContinueButton) {
+    closeLoginModal("success_fallback");
+    return;
+  }
 
   loginForm.hidden = true;
   authModeButton.hidden = true;
@@ -1020,9 +1053,11 @@ loginModal.addEventListener("click", (event) => {
   }
 });
 
-loginContinueButton.addEventListener("click", () => {
-  closeLoginModal("success_continue");
-});
+if (loginContinueButton) {
+  loginContinueButton.addEventListener("click", () => {
+    closeLoginModal("success_continue");
+  });
+}
 
 phoneInput.addEventListener("input", () => {
   phoneInput.value = normalizeMainlandPhone(phoneInput.value);
@@ -1078,6 +1113,7 @@ loginForm.addEventListener("submit", async (event) => {
       switchToLoginAfterUserExists();
     } else {
       setLoginMessage(message);
+      showStatusToast(message, "error");
     }
 
     trackEvent(failedMode === "register" ? "phone_register_failed" : "phone_login_failed", {
