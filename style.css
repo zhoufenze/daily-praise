@@ -697,6 +697,16 @@ h1 {
   color: #3f715c;
 }
 
+.form-message.is-error {
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid rgba(236, 141, 112, 0.32);
+  border-radius: 14px;
+  color: #7d4938;
+  background: rgba(255, 246, 241, 0.98);
+  font-weight: 800;
+}
+
 .login-submit {
   min-height: 48px;
   border: 0;

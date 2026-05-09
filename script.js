@@ -705,9 +705,14 @@ function showStatusToast(message, type = "info") {
   }, 3200);
 }
 
-function setLoginMessage(message, isSuccess = false) {
-  loginMessage.textContent = message;
+function setLoginMessage(message, type = "info") {
+  const safeMessage = message ? getSafeMessage(message) : "";
+  const isSuccess = type === true || type === "success";
+  const isError = type === "error";
+
+  loginMessage.textContent = safeMessage;
   loginMessage.classList.toggle("is-success", isSuccess);
+  loginMessage.classList.toggle("is-error", isError);
 }
 
 function resetLoginSuccessState() {
@@ -766,7 +771,7 @@ function setAuthMode(mode, message = "") {
   loginSubmitButton.textContent = isRegister ? "注册并登录" : "登录";
 
   if (message) {
-    setLoginMessage(message);
+    setLoginMessage(message, "error");
   }
 
   trackEvent("auth_mode_change", { authMode: membershipState.authMode });
@@ -779,7 +784,8 @@ function isUserNotFoundError(message) {
     normalized.includes("user does not exist") ||
     normalized.includes("not found") ||
     message.includes("用户不存在") ||
-    message.includes("用户未注册")
+    message.includes("用户未注册") ||
+    message.includes("还没有注册")
   );
 }
 
@@ -790,7 +796,8 @@ function isUserExistsError(message) {
     normalized.includes("user exists") ||
     normalized.includes("already registered") ||
     message.includes("用户已存在") ||
-    message.includes("已注册")
+    message.includes("已注册") ||
+    message.includes("已经注册")
   );
 }
 
@@ -839,6 +846,28 @@ function looksLikeSensitiveToken(value) {
 }
 
 function getSafeMessage(message) {
+  const rawMessage = String(message || "");
+  const normalized = rawMessage.toLowerCase();
+
+  if (
+    normalized.includes("1 text message per minute") ||
+    normalized.includes("one text message per minute") ||
+    normalized.includes("too many") ||
+    normalized.includes("rate limit") ||
+    normalized.includes("frequency") ||
+    rawMessage.includes("每分钟")
+  ) {
+    return "验证码发送太频繁了，请 1 分钟后再试。";
+  }
+
+  if (isUserNotFoundError(rawMessage)) {
+    return "这个手机号还没有注册，请先切换到注册模式。";
+  }
+
+  if (isUserExistsError(rawMessage)) {
+    return "这个手机号已经注册过了，请切换到登录模式。";
+  }
+
   if (String(message).includes("invalid client id")) {
     return "CloudBase 客户端配置需要更新，请刷新页面后重试。";
   }
@@ -884,17 +913,20 @@ function withTimeout(promise, ms, timeoutMessage) {
 }
 
 async function requestSmsCode() {
-  if (!membershipState.auth?.signInWithOtp) {
+  if (!membershipState.auth?.signInWithOtp && !membershipState.auth?.signUp) {
     throw new Error("当前页面暂时无法发送验证码，请确认 CloudBase SDK 已加载");
   }
 
   const phone = getPhoneForCloudBase();
   trackEvent("sms_code_request", { loginMethod: "phone", authMode: membershipState.authMode });
 
-  const result = await membershipState.auth.signInWithOtp({
-    phone,
-    shouldCreateUser: true
-  });
+  const result =
+    membershipState.authMode === "register" && typeof membershipState.auth.signUp === "function"
+      ? await membershipState.auth.signUp({ phone })
+      : await membershipState.auth.signInWithOtp({
+          phone,
+          shouldCreateUser: membershipState.authMode === "register"
+        });
 
   if (result?.error) {
     throw result.error;
@@ -1143,7 +1175,7 @@ sendCodeButton.addEventListener("click", async () => {
 
   try {
     await requestSmsCode();
-    setLoginMessage("验证码已发送，请查看手机短信。", true);
+    setLoginMessage("验证码已发送，请查看手机短信。", "success");
   } catch (error) {
     const message = getErrorMessage(error);
     const failedMode = membershipState.authMode;
@@ -1153,7 +1185,8 @@ sendCodeButton.addEventListener("click", async () => {
     } else if (membershipState.authMode === "register" && isUserExistsError(message)) {
       switchToLoginAfterUserExists();
     } else {
-      setLoginMessage(message);
+      setLoginMessage(message, "error");
+      showStatusToast(message, "error");
     }
 
     trackEvent("sms_code_request_failed", {
@@ -1179,10 +1212,13 @@ loginForm.addEventListener("submit", async (event) => {
 
     if (failedMode === "login" && isUserNotFoundError(message)) {
       switchToRegisterAfterUserNotFound();
+    } else if (failedMode === "register" && isUserNotFoundError(message)) {
+      setLoginMessage("注册验证码已失效，请重新获取注册验证码。", "error");
+      showStatusToast("注册验证码已失效，请重新获取注册验证码。", "error");
     } else if (failedMode === "register" && isUserExistsError(message)) {
       switchToLoginAfterUserExists();
     } else {
-      setLoginMessage(message);
+      setLoginMessage(message, "error");
       showStatusToast(message, "error");
     }
 
