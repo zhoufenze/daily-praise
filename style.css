@@ -750,6 +750,7 @@ h1 {
   font-size: 14px;
   font-weight: 900;
   text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .status-toast.is-success {

@@ -689,8 +689,10 @@ function showStatusToast(message, type = "info") {
     return;
   }
 
+  const safeMessage = getSafeMessage(message);
+
   window.clearTimeout(statusToastTimer);
-  statusToast.textContent = message;
+  statusToast.textContent = safeMessage;
   statusToast.hidden = false;
   statusToast.classList.toggle("is-success", type === "success");
   statusToast.classList.toggle("is-error", type === "error");
@@ -823,20 +825,37 @@ function getCodeValue() {
   return code;
 }
 
+function looksLikeSensitiveToken(value) {
+  if (typeof value !== "string") {
+    return false;
+  }
+
+  const trimmed = value.trim();
+  return /^eyJ[A-Za-z0-9_-]+\./.test(trimmed) || (!/\s/.test(trimmed) && trimmed.length > 120);
+}
+
+function getSafeMessage(message) {
+  if (looksLikeSensitiveToken(message)) {
+    return "登录已经完成，正在同步状态，请稍后刷新页面。";
+  }
+
+  return message || "操作失败，请稍后再试";
+}
+
 function getErrorMessage(error) {
   if (!error) {
     return "操作失败，请稍后再试";
   }
 
   if (typeof error === "string") {
-    return error;
+    return getSafeMessage(error);
   }
 
   if (error.error?.message) {
-    return error.error.message;
+    return getSafeMessage(error.error.message);
   }
 
-  return error.message || error.error_description || "操作失败，请稍后再试";
+  return getSafeMessage(error.message || error.error_description || "操作失败，请稍后再试");
 }
 
 function delay(ms) {
@@ -903,39 +922,48 @@ async function completePhoneLogin() {
   }
 
   membershipState.isLoggedIn = true;
-  setLoginMessage("验证码通过，正在领取夸夸次数...", true);
-
-  const bonusResult = await withTimeout(
-    callCloudFunction("grantLoginBonus", {}),
-    8000,
-    "登录成功，但领取次数超时了，请稍后重试"
-  );
-
-  if (bonusResult?.ok === false) {
-    throw new Error(bonusResult.reason || "登录成功，但领取次数失败，请稍后重试");
-  }
-
-  trackEvent("login_bonus_granted", {
-    granted: bonusResult?.granted,
-    bonusCredits: bonusResult?.bonusCredits
-  });
-
-  const quota = await withTimeout(
-    refreshQuotaStatus(),
-    8000,
-    "登录成功，但次数同步超时了，请刷新页面重试"
-  );
-
-  if (!quota.isLoggedIn) {
-    throw new Error("登录状态还没有同步成功，请刷新页面后重试");
-  }
-
-  setLoginMessage("", true);
-  showLoginSuccessState(authMode, quota, bonusResult);
+  updateQuotaUi();
+  closeLoginModal(authMode === "register" ? "register_auth_success" : "login_auth_success");
+  showStatusToast(authMode === "register" ? "注册成功，已登录。" : "登录成功，可以继续被夸了。", "success");
   trackEvent(authMode === "register" ? "phone_register_success" : "phone_login_success", {
     loginMethod: "phone",
     authMode
   });
+
+  try {
+    const bonusResult = await withTimeout(
+      callCloudFunction("grantLoginBonus", {}),
+      8000,
+      "登录成功，但领取次数同步较慢"
+    );
+
+    if (bonusResult?.ok === false) {
+      throw new Error(bonusResult.reason || "登录成功，但领取次数同步较慢");
+    }
+
+    trackEvent("login_bonus_granted", {
+      granted: bonusResult?.granted,
+      bonusCredits: bonusResult?.bonusCredits
+    });
+
+    const quota = await withTimeout(
+      refreshQuotaStatus(),
+      8000,
+      "登录成功，但次数同步较慢"
+    );
+
+    if (quota.isLoggedIn) {
+      showStatusToast(`登录成功，现在还有 ${getTotalRemaining(quota)} 次可以使用。`, "success");
+    }
+  } catch (error) {
+    const message = getErrorMessage(error);
+    membershipState.lastError = message;
+    showStatusToast("登录成功，次数同步可能稍有延迟，请刷新页面查看。", "success");
+    trackEvent("auth_post_login_sync_failed", {
+      reason: message,
+      authMode
+    });
+  }
 }
 
 async function handleNextPraise() {
