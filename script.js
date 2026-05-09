@@ -5,23 +5,23 @@ const praiseLibrary = {
       {
         id: "warm-morning-01",
         praise: "你已经很努力了，今天值得被温柔地肯定。",
-        musicTitle: "Morning Light",
-        musicMood: "轻柔、明亮、像早晨第一口热茶",
-        musicFile: "./music/morning-light.wav"
+        musicTitle: "Nostalgic Piano",
+        musicMood: "温柔、舒缓、像被轻轻接住",
+        musicFile: "./music/atlasaudio-nostalgic-piano-520047.mp3"
       },
       {
         id: "warm-sunny-02",
         praise: "你身上有一种让人安心的力量，靠近你会觉得世界慢了一点。",
-        musicTitle: "Sunny Walk",
-        musicMood: "轻快、舒展、适合重新出发",
-        musicFile: "./music/sunny-walk.wav"
+        musicTitle: "Nostalgic Piano",
+        musicMood: "温柔、舒缓、像被轻轻接住",
+        musicFile: "./music/atlasaudio-nostalgic-piano-520047.mp3"
       },
       {
         id: "warm-spark-03",
         praise: "你把平凡的一天照顾得很好，这本身就很了不起。",
-        musicTitle: "Gentle Spark",
-        musicMood: "柔和、闪亮、带一点小小期待",
-        musicFile: "./music/gentle-spark.wav"
+        musicTitle: "Nostalgic Piano",
+        musicMood: "温柔、舒缓、像被轻轻接住",
+        musicFile: "./music/atlasaudio-nostalgic-piano-520047.mp3"
       }
     ]
   },
@@ -31,23 +31,23 @@ const praiseLibrary = {
       {
         id: "pro-clear-01",
         praise: "你的表达很清楚，让复杂的事情也变得可以推进。",
-        musicTitle: "Clear Steps",
-        musicMood: "清爽、稳定、适合专注前进",
-        musicFile: "./music/clear-steps.wav"
+        musicTitle: "Piano Moment",
+        musicMood: "清晰、沉稳、适合把事情做好",
+        musicFile: "./music/good_b_music-piano-moment-9835.mp3"
       },
       {
         id: "pro-start-02",
         praise: "你做事有分寸，也有判断力，这会让人很自然地信任你。",
-        musicTitle: "Fresh Start",
-        musicMood: "利落、轻盈、带一点行动感",
-        musicFile: "./music/fresh-start.wav"
+        musicTitle: "Piano Moment",
+        musicMood: "清晰、沉稳、适合把事情做好",
+        musicFile: "./music/good_b_music-piano-moment-9835.mp3"
       },
       {
         id: "pro-confidence-03",
         praise: "你的可靠不是靠声音变大，而是靠每个细节都站得住。",
-        musicTitle: "Soft Confidence",
-        musicMood: "温和、自信、节奏不紧不慢",
-        musicFile: "./music/soft-confidence.wav"
+        musicTitle: "Piano Moment",
+        musicMood: "清晰、沉稳、适合把事情做好",
+        musicFile: "./music/good_b_music-piano-moment-9835.mp3"
       }
     ]
   },
@@ -57,23 +57,23 @@ const praiseLibrary = {
       {
         id: "funny-bounce-01",
         praise: "你今天的状态像给空气加了点糖，连路过的烦恼都想绕路。",
-        musicTitle: "Smile Bounce",
-        musicMood: "俏皮、轻快、带着笑意",
-        musicFile: "./music/smile-bounce.wav"
+        musicTitle: "Nostalgic",
+        musicMood: "轻松、明亮、带一点会心一笑",
+        musicFile: "./music/monume-nostalgic-509444.mp3"
       },
       {
         id: "funny-parade-02",
         praise: "你这种好能量，建议申请一个小型庆祝仪式。",
-        musicTitle: "Tiny Parade",
-        musicMood: "活泼、跳跃、有一点庆祝感",
-        musicFile: "./music/tiny-parade.wav"
+        musicTitle: "Nostalgic",
+        musicMood: "轻松、明亮、带一点会心一笑",
+        musicFile: "./music/monume-nostalgic-509444.mp3"
       },
       {
         id: "funny-walk-03",
         praise: "你不只是把事情做好，还顺手把气氛调亮了。",
-        musicTitle: "Sunny Walk",
-        musicMood: "明朗、松弛、适合轻松一下",
-        musicFile: "./music/sunny-walk.wav"
+        musicTitle: "Nostalgic",
+        musicMood: "轻松、明亮、带一点会心一笑",
+        musicFile: "./music/monume-nostalgic-509444.mp3"
       }
     ]
   },
@@ -83,23 +83,23 @@ const praiseLibrary = {
       {
         id: "smart-spark-01",
         praise: "你很会照顾别人的感受，而且不会丢掉自己的边界。",
-        musicTitle: "Gentle Spark",
-        musicMood: "温柔、克制、心里有光",
-        musicFile: "./music/gentle-spark.wav"
+        musicTitle: "Piano Piano Music",
+        musicMood: "细腻、真诚、适合慢慢被理解",
+        musicFile: "./music/paulyudin-piano-piano-music-508963.mp3"
       },
       {
         id: "smart-light-02",
         praise: "你能听见话里的情绪，这是一种很珍贵的能力。",
-        musicTitle: "Morning Light",
-        musicMood: "干净、柔软、像被认真理解",
-        musicFile: "./music/morning-light.wav"
+        musicTitle: "Piano Piano Music",
+        musicMood: "细腻、真诚、适合慢慢被理解",
+        musicFile: "./music/paulyudin-piano-piano-music-508963.mp3"
       },
       {
         id: "smart-confidence-03",
         praise: "你说话让人舒服，不是因为讨好，而是因为真诚又有尺度。",
-        musicTitle: "Soft Confidence",
-        musicMood: "平和、笃定、适合慢慢变好",
-        musicFile: "./music/soft-confidence.wav"
+        musicTitle: "Piano Piano Music",
+        musicMood: "细腻、真诚、适合慢慢被理解",
+        musicFile: "./music/paulyudin-piano-piano-music-508963.mp3"
       }
     ]
   }

@@ -1,20 +1,82 @@
 # Music Credits
 
-V2 当前音乐素材为项目内原创生成的轻音乐循环，用于 `夸夸` 本地素材库。
+Last Updated: 2026-05-09
 
-## Asset List
+---
 
-- `music/morning-light.wav` - original generated instrumental loop
-- `music/sunny-walk.wav` - original generated instrumental loop
-- `music/clear-steps.wav` - original generated instrumental loop
-- `music/fresh-start.wav` - original generated instrumental loop
-- `music/smile-bounce.wav` - original generated instrumental loop
-- `music/tiny-parade.wav` - original generated instrumental loop
-- `music/gentle-spark.wav` - original generated instrumental loop
-- `music/soft-confidence.wav` - original generated instrumental loop
+## 1. Nostalgic Piano
 
-## Notes
+- Title: Nostalgic Piano
+- Artist: LiteSaturation
+- Source:
+  https://pixabay.com/music/nostalgia-nostalgic-piano-520047/
+- License: Pixabay Content License
+- Commercial Use: Allowed
+- Attribution Required: Usually not required
+- Download Date: 2026-05-09
+- Local File: `music/atlasaudio-nostalgic-piano-520047.mp3`
 
-- No third-party copyrighted music file is bundled in this version.
-- Files are stored locally so the website does not depend on external music hosts at runtime.
-- If replacing these with third-party tracks later, record the source URL, author, license, and download date here before publishing.
+---
+
+## 2. Piano Moment
+
+- Title: Piano Moment
+- Artist: Good_B_Music
+- Source:
+  https://pixabay.com/music/solo-piano-piano-moment-9835/
+- License: Pixabay Content License
+- Commercial Use: Allowed
+- Attribution Required: Usually not required
+- Download Date: 2026-05-09
+- Local File: `music/good_b_music-piano-moment-9835.mp3`
+
+---
+
+## 3. Nostalgic
+
+- Title: Nostalgic
+- Artist: Sonican
+- Source:
+  https://pixabay.com/music/nostalgia-nostalgic-509444/
+- License: Pixabay Content License
+- Commercial Use: Allowed
+- Attribution Required: Usually not required
+- Download Date: 2026-05-09
+- Local File: `music/monume-nostalgic-509444.mp3`
+
+---
+
+## 4. Piano Piano Music
+
+- Title: Piano Piano Music
+- Artist: Universfield
+- Source:
+  https://pixabay.com/music/solo-piano-piano-piano-music-508963/
+- License: Pixabay Content License
+- Commercial Use: Allowed
+- Attribution Required: Usually not required
+- Download Date: 2026-05-09
+- Local File: `music/paulyudin-piano-piano-music-508963.mp3`
+
+---
+
+# License Notes
+
+All tracks above were sourced from Pixabay Music and are generally available under the Pixabay Content License.
+
+Pixabay License Summary:
+
+- Free to use
+- Commercial use allowed
+- No attribution required in most cases
+- Cannot redistribute the music files themselves as standalone assets
+
+Official License:
+https://pixabay.com/service/license-summary/
+
+## Style Mapping
+
+- 温暖: Nostalgic Piano
+- 专业: Piano Moment
+- 幽默: Nostalgic
+- 高情商: Piano Piano Music
