@@ -546,12 +546,10 @@ h1 {
   outline-offset: 4px;
 }
 
-.login-modal[hidden] {
-  display: none;
-}
-
+.login-modal[hidden],
 .login-modal:not(.is-open) {
-  display: none;
+  display: none !important;
+  pointer-events: none;
 }
 
 .login-modal {

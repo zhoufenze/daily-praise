@@ -647,8 +647,11 @@ async function consumeQuotaBeforeNext() {
 }
 
 function openLoginModal(reason = "manual") {
+  loginModal.style.removeProperty("display");
+  loginModal.style.removeProperty("pointer-events");
   loginModal.hidden = false;
   loginModal.classList.add("is-open");
+  loginModal.removeAttribute("aria-hidden");
   setAuthMode("login");
   loginMessage.textContent = "";
   loginMessage.classList.remove("is-success");
@@ -659,9 +662,18 @@ function openLoginModal(reason = "manual") {
   });
 }
 
-function closeLoginModal(reason = "manual") {
+function forceHideLoginModal() {
   loginModal.classList.remove("is-open");
   loginModal.hidden = true;
+  loginModal.setAttribute("hidden", "");
+  loginModal.setAttribute("aria-hidden", "true");
+  loginModal.style.setProperty("display", "none", "important");
+  loginModal.style.pointerEvents = "none";
+}
+
+function closeLoginModal(reason = "manual") {
+  forceHideLoginModal();
+  window.setTimeout(forceHideLoginModal, 0);
   trackEvent("login_prompt_close", { reason });
 }
 
