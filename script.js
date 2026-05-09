@@ -128,6 +128,10 @@ const codeInput = document.querySelector("#codeInput");
 const sendCodeButton = document.querySelector("#sendCodeButton");
 const loginSubmitButton = document.querySelector("#loginSubmitButton");
 const loginMessage = document.querySelector("#loginMessage");
+const loginSuccess = document.querySelector("#loginSuccess");
+const loginSuccessTitle = document.querySelector("#loginSuccessTitle");
+const loginSuccessText = document.querySelector("#loginSuccessText");
+const loginContinueButton = document.querySelector("#loginContinueButton");
 
 const allPraiseItems = Object.entries(praiseLibrary).flatMap(([style, group]) =>
   group.items.map((item, index) => ({ ...item, style, styleIndex: index }))
@@ -144,7 +148,8 @@ const membershipState = {
   authMode: "login",
   otpMode: "login",
   lastError: "",
-  localFallback: false
+  localFallback: false,
+  isAuthSubmitting: false
 };
 
 let activeStyle = "warm";
@@ -682,9 +687,32 @@ function setLoginMessage(message, isSuccess = false) {
   loginMessage.classList.toggle("is-success", isSuccess);
 }
 
+function resetLoginSuccessState() {
+  loginForm.hidden = false;
+  authModeButton.hidden = false;
+  loginSuccess.hidden = true;
+  loginSuccessTitle.textContent = "";
+  loginSuccessText.textContent = "";
+}
+
+function showLoginSuccessState(authMode, quota, bonusResult) {
+  const totalRemaining = getTotalRemaining(quota);
+  const hasNewBonus = Boolean(bonusResult?.granted);
+
+  loginForm.hidden = true;
+  authModeButton.hidden = true;
+  loginSuccess.hidden = false;
+  loginSuccessTitle.textContent = authMode === "register" ? "注册成功" : "登录成功";
+  loginSuccessText.textContent = hasNewBonus
+    ? `已额外获得 10 次夸夸次数，现在还有 ${totalRemaining} 次可以使用。`
+    : `登录状态已确认，现在还有 ${totalRemaining} 次可以使用。`;
+  loginContinueButton.focus();
+}
+
 function setAuthMode(mode, message = "") {
   const isRegister = mode === "register";
 
+  resetLoginSuccessState();
   membershipState.authMode = isRegister ? "register" : "login";
   membershipState.otpVerifier = null;
   membershipState.otpMode = membershipState.authMode;
@@ -869,9 +897,8 @@ async function completePhoneLogin() {
     throw new Error("登录状态还没有同步成功，请刷新页面后重试");
   }
 
-  setLoginMessage("登录成功，已领取夸夸次数。", true);
-  await delay(650);
-  closeLoginModal(authMode === "register" ? "register_success" : "login_success");
+  setLoginMessage("", true);
+  showLoginSuccessState(authMode, quota, bonusResult);
   trackEvent(authMode === "register" ? "phone_register_success" : "phone_login_success", {
     loginMethod: "phone",
     authMode
@@ -984,9 +1011,17 @@ loginButton.addEventListener("click", () => {
 });
 
 loginModal.addEventListener("click", (event) => {
+  if (membershipState.isAuthSubmitting) {
+    return;
+  }
+
   if (event.target.closest("[data-close-login]")) {
     closeLoginModal("close_button");
   }
+});
+
+loginContinueButton.addEventListener("click", () => {
+  closeLoginModal("success_continue");
 });
 
 phoneInput.addEventListener("input", () => {
@@ -1028,6 +1063,7 @@ sendCodeButton.addEventListener("click", async () => {
 loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   loginSubmitButton.disabled = true;
+  membershipState.isAuthSubmitting = true;
   setLoginMessage(membershipState.otpMode === "register" ? "正在注册并登录..." : "正在登录...");
 
   try {
@@ -1050,6 +1086,7 @@ loginForm.addEventListener("submit", async (event) => {
       authMode: failedMode
     });
   } finally {
+    membershipState.isAuthSubmitting = false;
     loginSubmitButton.disabled = false;
   }
 });

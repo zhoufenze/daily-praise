@@ -8,7 +8,7 @@
       content="夸夸每天送你一句中文赞美和一首轻快音乐，给今天一点轻轻的能量。"
     />
     <title>夸夸</title>
-    <link rel="stylesheet" href="./style.css?v=20260509-login-fix" />
+    <link rel="stylesheet" href="./style.css?v=20260509-login-state" />
   </head>
   <body>
     <main class="app-shell" aria-labelledby="app-title">
@@ -187,11 +187,19 @@
 
           <button class="login-submit" id="loginSubmitButton" type="submit">登录</button>
         </form>
+
+        <div class="login-success" id="loginSuccess" hidden>
+          <strong id="loginSuccessTitle">登录成功</strong>
+          <p id="loginSuccessText">已领取夸夸次数，可以继续换一句了。</p>
+          <button class="login-submit" id="loginContinueButton" type="button">
+            返回夸夸
+          </button>
+        </div>
       </section>
     </div>
 
-    <script src="./analytics-config.js?v=20260509-login-fix"></script>
-    <script src="./membership-config.js?v=20260509-login-fix"></script>
-    <script src="./script.js?v=20260509-login-fix"></script>
+    <script src="./analytics-config.js?v=20260509-login-state"></script>
+    <script src="./membership-config.js?v=20260509-login-state"></script>
+    <script src="./script.js?v=20260509-login-state"></script>
   </body>
 </html>

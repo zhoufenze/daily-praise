@@ -391,7 +391,8 @@ V2.0.1 暂不真实支付，只预留。
 - 注册模式下先完成手机号注册
 - 调用 `grantLoginBonus`
 - 调用 `getQuotaStatus`
-- 关闭登录弹窗
+- 在登录弹窗内展示 `登录成功` / `注册成功` 和当前剩余次数
+- 用户点击 `返回夸夸` 后再关闭登录弹窗
 - 发送 `phone_login_success`
 - 注册成功时发送 `phone_register_success`
 
