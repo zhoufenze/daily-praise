@@ -404,20 +404,23 @@ function updateQuotaUi() {
   if (!membershipState.initialized) {
     quotaPill.textContent = "次数加载中";
     nextButton.disabled = true;
+    loginButton.disabled = false;
     return;
   }
 
   nextButton.disabled = isNextLoading || Boolean(quota && !quota.canChangePraise);
 
-  if (membershipState.lastError) {
-    quotaPill.textContent = "次数暂不可用";
-    loginButton.textContent = membershipState.isLoggedIn ? "已登录" : "登录";
+  if (membershipState.lastError && !quota) {
+    quotaPill.textContent = membershipState.isLoggedIn ? "次数同步中" : "次数暂不可用";
+    loginButton.textContent = membershipState.isLoggedIn ? "退出" : "登录";
+    loginButton.disabled = false;
     return;
   }
 
   if (!quota) {
     quotaPill.textContent = "今日可换 3 次";
     loginButton.textContent = "登录";
+    loginButton.disabled = false;
     return;
   }
 
@@ -425,8 +428,8 @@ function updateQuotaUi() {
 
   if (membershipState.isLoggedIn) {
     quotaPill.textContent = `剩余 ${totalRemaining} 次`;
-    loginButton.textContent = "已登录";
-    loginButton.disabled = true;
+    loginButton.textContent = "退出";
+    loginButton.disabled = false;
     return;
   }
 
@@ -633,6 +636,8 @@ async function refreshQuotaStatus() {
 }
 
 async function consumeQuotaBeforeNext() {
+  membershipState.lastError = "";
+
   if (membershipState.localFallback) {
     const result = consumeLocalQuota();
     membershipState.quota = normalizeQuota(result);
@@ -960,7 +965,6 @@ async function completePhoneLogin() {
     }
   } catch (error) {
     const message = getErrorMessage(error);
-    membershipState.lastError = message;
     showStatusToast("登录成功，次数同步可能稍有延迟，请刷新页面查看。", "success");
     trackEvent("auth_post_login_sync_failed", {
       reason: message,
@@ -1030,6 +1034,40 @@ async function handleNextPraise() {
   }
 }
 
+async function handleLogout() {
+  loginButton.disabled = true;
+  showStatusToast("正在退出登录...");
+
+  try {
+    if (typeof membershipState.auth?.signOut === "function") {
+      await membershipState.auth.signOut();
+    } else if (typeof membershipState.auth?.logout === "function") {
+      await membershipState.auth.logout();
+    }
+  } catch (error) {
+    trackEvent("logout_failed", {
+      reason: getErrorMessage(error)
+    });
+  }
+
+  membershipState.isLoggedIn = false;
+  membershipState.otpVerifier = null;
+  membershipState.authMode = "login";
+  membershipState.otpMode = "login";
+  membershipState.lastError = "";
+
+  try {
+    await refreshQuotaStatus();
+  } catch (error) {
+    membershipState.quota = getLocalQuota();
+    membershipState.initialized = true;
+  }
+
+  updateQuotaUi();
+  showStatusToast("已退出登录。", "success");
+  trackEvent("logout_success");
+}
+
 nextButton.addEventListener("click", handleNextPraise);
 
 styleButtons.forEach((button) => {
@@ -1063,8 +1101,9 @@ musicButton.addEventListener("click", () => {
   });
 });
 
-loginButton.addEventListener("click", () => {
+loginButton.addEventListener("click", async () => {
   if (membershipState.isLoggedIn) {
+    await handleLogout();
     return;
   }
 
