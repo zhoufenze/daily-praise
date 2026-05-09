@@ -495,7 +495,6 @@ function getCloudbaseOptions() {
 
   if (publishableKey) {
     options.accessKey = publishableKey;
-    options.clientId = publishableKey;
   }
 
   return options;
@@ -831,10 +830,14 @@ function looksLikeSensitiveToken(value) {
   }
 
   const trimmed = value.trim();
-  return /^eyJ[A-Za-z0-9_-]+\./.test(trimmed) || (!/\s/.test(trimmed) && trimmed.length > 120);
+  return /\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/.test(trimmed);
 }
 
 function getSafeMessage(message) {
+  if (String(message).includes("invalid client id")) {
+    return "CloudBase 客户端配置需要更新，请刷新页面后重试。";
+  }
+
   if (looksLikeSensitiveToken(message)) {
     return "登录已经完成，正在同步状态，请稍后刷新页面。";
   }
