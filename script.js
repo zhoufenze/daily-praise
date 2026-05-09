@@ -116,19 +116,45 @@ const musicButtonIcon = document.querySelector("#musicButtonIcon");
 const musicPlayer = document.querySelector("#musicPlayer");
 const musicTitle = document.querySelector("#musicTitle");
 const musicMood = document.querySelector("#musicMood");
+const quotaPill = document.querySelector("#quotaPill");
+const loginButton = document.querySelector("#loginButton");
+const loginModal = document.querySelector("#loginModal");
+const loginForm = document.querySelector("#loginForm");
+const phoneInput = document.querySelector("#phoneInput");
+const codeInput = document.querySelector("#codeInput");
+const sendCodeButton = document.querySelector("#sendCodeButton");
+const loginSubmitButton = document.querySelector("#loginSubmitButton");
+const loginMessage = document.querySelector("#loginMessage");
 
 const allPraiseItems = Object.entries(praiseLibrary).flatMap(([style, group]) =>
   group.items.map((item, index) => ({ ...item, style, styleIndex: index }))
 );
+
+const membershipState = {
+  app: null,
+  auth: null,
+  enabled: false,
+  initialized: false,
+  isLoggedIn: false,
+  quota: null,
+  otpVerifier: null,
+  lastError: "",
+  localFallback: false
+};
 
 let activeStyle = "warm";
 let activeItem = null;
 let activeStyleIndex = 0;
 let praiseCount = 0;
 let isMusicPlaying = false;
+let isNextLoading = false;
 
 function getAnalyticsConfig() {
   return window.DAILY_PRAISE_ANALYTICS || {};
+}
+
+function getMembershipConfig() {
+  return window.KUAKUA_MEMBERSHIP?.cloudbase || {};
 }
 
 function getDistinctId() {
@@ -192,7 +218,7 @@ function capturePostHogEvent(name, properties) {
 function trackEvent(name, details = {}) {
   const payload = {
     event: name,
-    page: "kuakua_v2",
+    page: "kuakua_v2_0_1",
     timestamp: new Date().toISOString(),
     ...details
   };
@@ -230,6 +256,11 @@ function getDailyStyleIndex(style) {
 function getItemByStyleIndex(style, index) {
   const item = praiseLibrary[style].items[index];
   return { ...item, style, styleIndex: index };
+}
+
+function getNextItem() {
+  const nextIndex = (activeStyleIndex + 1) % praiseLibrary[activeStyle].items.length;
+  return getItemByStyleIndex(activeStyle, nextIndex);
 }
 
 function setStyleButtonState(style) {
@@ -330,20 +361,453 @@ function setTodayLabel() {
   todayLabel.textContent = formatter.format(new Date());
 }
 
-nextButton.addEventListener("click", () => {
-  const previousItem = activeItem;
-  const nextIndex = (activeStyleIndex + 1) % praiseLibrary[activeStyle].items.length;
+function normalizeQuota(result = {}) {
+  return {
+    ok: result.ok !== false,
+    isLoggedIn: Boolean(result.isLoggedIn),
+    freeLimit: Number(result.freeLimit ?? 3),
+    freeUsed: Number(result.freeUsed ?? 0),
+    freeRemaining: Number(result.freeRemaining ?? 0),
+    bonusCredits: Number(result.bonusCredits ?? 0),
+    paidCredits: Number(result.paidCredits ?? 0),
+    canChangePraise: result.canChangePraise !== false,
+    reason: result.reason || "",
+    shouldPromptLogin: Boolean(result.shouldPromptLogin)
+  };
+}
 
-  trackEvent(nextButton.dataset.analyticsEvent, {
-    style: activeStyle,
-    previousPraiseId: previousItem?.id,
-    previousPraiseText: previousItem?.praise,
-    previousMusicTitle: previousItem?.musicTitle,
-    nextStyleIndex: nextIndex
+function getTotalRemaining(quota = membershipState.quota) {
+  if (!quota) {
+    return 0;
+  }
+
+  return quota.freeRemaining + quota.bonusCredits + quota.paidCredits;
+}
+
+function updateQuotaUi() {
+  const quota = membershipState.quota;
+  quotaPill.classList.toggle("is-warning", Boolean(quota && getTotalRemaining(quota) <= 0));
+  loginButton.classList.toggle("is-logged-in", membershipState.isLoggedIn);
+
+  if (!membershipState.initialized) {
+    quotaPill.textContent = "次数加载中";
+    nextButton.disabled = true;
+    return;
+  }
+
+  nextButton.disabled = isNextLoading || Boolean(quota && !quota.canChangePraise);
+
+  if (membershipState.lastError) {
+    quotaPill.textContent = "次数暂不可用";
+    loginButton.textContent = membershipState.isLoggedIn ? "已登录" : "登录";
+    return;
+  }
+
+  if (!quota) {
+    quotaPill.textContent = "今日可换 3 次";
+    loginButton.textContent = "登录";
+    return;
+  }
+
+  const totalRemaining = getTotalRemaining(quota);
+
+  if (membershipState.isLoggedIn) {
+    quotaPill.textContent = `剩余 ${totalRemaining} 次`;
+    loginButton.textContent = "已登录";
+    loginButton.disabled = true;
+    return;
+  }
+
+  quotaPill.textContent =
+    totalRemaining > 0 ? `今日还可换 ${quota.freeRemaining} 次` : "登录后继续夸夸";
+  loginButton.textContent = "登录";
+  loginButton.disabled = false;
+}
+
+function setNextLoading(isLoading) {
+  isNextLoading = isLoading;
+  nextButton.disabled = isLoading;
+  nextButton.setAttribute("aria-busy", String(isLoading));
+  nextButton.querySelector(".button-icon").textContent = isLoading ? "…" : "↻";
+}
+
+function isLocalPreview() {
+  return ["", "localhost", "127.0.0.1"].includes(window.location.hostname);
+}
+
+function getLocalQuota() {
+  const key = `kuakua_local_quota_${getDateKey()}`;
+  const freeLimit = 3;
+  const freeUsed = Number(window.localStorage.getItem(key) || 0);
+  return normalizeQuota({
+    isLoggedIn: false,
+    freeLimit,
+    freeUsed,
+    freeRemaining: Math.max(0, freeLimit - freeUsed),
+    canChangePraise: freeUsed < freeLimit
+  });
+}
+
+function consumeLocalQuota() {
+  const key = `kuakua_local_quota_${getDateKey()}`;
+  const quota = getLocalQuota();
+
+  if (quota.freeRemaining <= 0) {
+    return {
+      ok: true,
+      allowed: false,
+      reason: "guest_quota_exhausted",
+      shouldPromptLogin: true,
+      ...quota
+    };
+  }
+
+  window.localStorage.setItem(key, String(quota.freeUsed + 1));
+  const nextQuota = getLocalQuota();
+  return {
+    ok: true,
+    allowed: true,
+    consumedFrom: "daily_free",
+    ...nextQuota
+  };
+}
+
+function getCloudbaseOptions() {
+  const config = getMembershipConfig();
+  const options = { env: config.envId };
+
+  if (config.publishableKey) {
+    options.clientId = config.publishableKey;
+  }
+
+  return options;
+}
+
+function loadCloudbaseSdk() {
+  if (window.cloudbase) {
+    return Promise.resolve(window.cloudbase);
+  }
+
+  const sdkUrl = "https://static.cloudbase.net/cloudbase-js-sdk/2.24.0/cloudbase.full.js";
+  const existingScript = document.querySelector(`script[src="${sdkUrl}"]`);
+
+  if (existingScript) {
+    return new Promise((resolve, reject) => {
+      existingScript.addEventListener("load", () => resolve(window.cloudbase), { once: true });
+      existingScript.addEventListener("error", () => reject(new Error("CloudBase SDK 加载失败")), {
+        once: true
+      });
+    });
+  }
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    const timer = window.setTimeout(() => {
+      script.remove();
+      reject(new Error("CloudBase SDK 加载超时"));
+    }, 8000);
+
+    script.src = sdkUrl;
+    script.async = true;
+    script.onload = () => {
+      window.clearTimeout(timer);
+      resolve(window.cloudbase);
+    };
+    script.onerror = () => {
+      window.clearTimeout(timer);
+      reject(new Error("CloudBase SDK 加载失败"));
+    };
+    document.head.append(script);
+  });
+}
+
+async function initMembership() {
+  const config = getMembershipConfig();
+
+  if (!config.enabled || !config.envId) {
+    membershipState.localFallback = true;
+    membershipState.initialized = true;
+    membershipState.quota = getLocalQuota();
+    updateQuotaUi();
+    return;
+  }
+
+  try {
+    const cloudbaseSdk = await loadCloudbaseSdk();
+
+    if (!cloudbaseSdk) {
+      throw new Error("CloudBase SDK 未加载");
+    }
+
+    membershipState.app = cloudbaseSdk.init(getCloudbaseOptions());
+    membershipState.auth = membershipState.app.auth({ persistence: "local" });
+    membershipState.enabled = true;
+    membershipState.isLoggedIn = await hasLoginState();
+    await refreshQuotaStatus();
+  } catch (error) {
+    membershipState.lastError = getErrorMessage(error);
+
+    if (isLocalPreview()) {
+      membershipState.localFallback = true;
+      membershipState.lastError = "";
+      membershipState.quota = getLocalQuota();
+    }
+
+    membershipState.initialized = true;
+    updateQuotaUi();
+    trackEvent("membership_init_failed", {
+      reason: membershipState.lastError || "local_fallback"
+    });
+  }
+}
+
+async function hasLoginState() {
+  const auth = membershipState.auth;
+
+  if (!auth) {
+    return false;
+  }
+
+  if (typeof auth.hasLoginState === "function") {
+    return Boolean(await auth.hasLoginState());
+  }
+
+  if (typeof auth.getLoginState === "function") {
+    return Boolean(await auth.getLoginState());
+  }
+
+  return Boolean(auth.currentUser);
+}
+
+async function callCloudFunction(name, data = {}) {
+  if (!membershipState.app?.callFunction) {
+    throw new Error("CloudBase 未初始化");
+  }
+
+  const response = await membershipState.app.callFunction({ name, data });
+  return response?.result || response;
+}
+
+async function refreshQuotaStatus() {
+  if (membershipState.localFallback) {
+    membershipState.quota = getLocalQuota();
+    membershipState.initialized = true;
+    updateQuotaUi();
+    return membershipState.quota;
+  }
+
+  const result = await callCloudFunction("getQuotaStatus", {
+    anonymousId: getDistinctId(),
+    dateKey: getDateKey()
   });
 
-  renderPraise(getItemByStyleIndex(activeStyle, nextIndex), "next_click");
-});
+  membershipState.quota = normalizeQuota(result);
+  membershipState.isLoggedIn = membershipState.quota.isLoggedIn;
+  membershipState.initialized = true;
+  membershipState.lastError = "";
+  updateQuotaUi();
+  trackEvent("quota_status_loaded", {
+    isLoggedIn: membershipState.isLoggedIn,
+    freeRemaining: membershipState.quota.freeRemaining,
+    bonusCredits: membershipState.quota.bonusCredits,
+    paidCredits: membershipState.quota.paidCredits
+  });
+  return membershipState.quota;
+}
+
+async function consumeQuotaBeforeNext() {
+  if (membershipState.localFallback) {
+    const result = consumeLocalQuota();
+    membershipState.quota = normalizeQuota(result);
+    updateQuotaUi();
+    return result;
+  }
+
+  const result = await callCloudFunction("consumePraiseCredit", {
+    anonymousId: getDistinctId(),
+    dateKey: getDateKey(),
+    currentPraiseId: activeItem?.id || ""
+  });
+
+  const nextQuota = normalizeQuota(result);
+  membershipState.quota = nextQuota;
+  updateQuotaUi();
+  return { ...result, ...nextQuota };
+}
+
+function openLoginModal(reason = "manual") {
+  loginModal.hidden = false;
+  loginMessage.textContent = "";
+  loginMessage.classList.remove("is-success");
+  setTimeout(() => phoneInput.focus(), 0);
+  trackEvent("login_prompt_view", {
+    reason,
+    freeRemaining: membershipState.quota?.freeRemaining ?? 0
+  });
+}
+
+function closeLoginModal(reason = "manual") {
+  loginModal.hidden = true;
+  trackEvent("login_prompt_close", { reason });
+}
+
+function setLoginMessage(message, isSuccess = false) {
+  loginMessage.textContent = message;
+  loginMessage.classList.toggle("is-success", isSuccess);
+}
+
+function normalizeMainlandPhone(value) {
+  return value.replace(/\D/g, "").slice(0, 11);
+}
+
+function getPhoneForCloudBase() {
+  const phone = normalizeMainlandPhone(phoneInput.value);
+
+  if (!/^1\d{10}$/.test(phone)) {
+    throw new Error("请输入正确的 11 位手机号");
+  }
+
+  return `+86${phone}`;
+}
+
+function getCodeValue() {
+  const code = codeInput.value.replace(/\D/g, "");
+
+  if (code.length < 4) {
+    throw new Error("请输入短信验证码");
+  }
+
+  return code;
+}
+
+function getErrorMessage(error) {
+  if (!error) {
+    return "操作失败，请稍后再试";
+  }
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  if (error.error?.message) {
+    return error.error.message;
+  }
+
+  return error.message || error.error_description || "操作失败，请稍后再试";
+}
+
+async function requestSmsCode() {
+  if (!membershipState.auth?.signInWithOtp) {
+    throw new Error("当前页面暂时无法发送验证码，请确认 CloudBase SDK 已加载");
+  }
+
+  const phone = getPhoneForCloudBase();
+  trackEvent("sms_code_request", { loginMethod: "phone" });
+
+  const result = await membershipState.auth.signInWithOtp({ phone });
+
+  if (result?.error) {
+    throw result.error;
+  }
+
+  membershipState.otpVerifier = result?.data?.verifyOtp;
+
+  if (typeof membershipState.otpVerifier !== "function") {
+    throw new Error("验证码发送成功，但登录校验器未返回");
+  }
+
+  trackEvent("sms_code_request_success", { loginMethod: "phone" });
+}
+
+async function completePhoneLogin() {
+  const code = getCodeValue();
+
+  if (typeof membershipState.otpVerifier !== "function") {
+    throw new Error("请先获取验证码");
+  }
+
+  trackEvent("phone_login_start", { loginMethod: "phone" });
+  const result = await membershipState.otpVerifier({ token: code });
+
+  if (result?.error) {
+    throw result.error;
+  }
+
+  membershipState.isLoggedIn = true;
+
+  const bonusResult = await callCloudFunction("grantLoginBonus", {});
+  trackEvent("login_bonus_granted", {
+    granted: bonusResult?.granted,
+    bonusCredits: bonusResult?.bonusCredits
+  });
+
+  await refreshQuotaStatus();
+  closeLoginModal("login_success");
+  trackEvent("phone_login_success", { loginMethod: "phone" });
+}
+
+async function handleNextPraise() {
+  if (isNextLoading) {
+    return;
+  }
+
+  const previousItem = activeItem;
+  const nextItem = getNextItem();
+  setNextLoading(true);
+
+  try {
+    const quotaResult = await consumeQuotaBeforeNext();
+
+    if (!quotaResult.allowed) {
+      trackEvent("quota_exhausted", {
+        reason: quotaResult.reason,
+        isLoggedIn: membershipState.isLoggedIn,
+        freeRemaining: quotaResult.freeRemaining,
+        bonusCredits: quotaResult.bonusCredits,
+        paidCredits: quotaResult.paidCredits
+      });
+
+      if (quotaResult.shouldPromptLogin || !membershipState.isLoggedIn) {
+        openLoginModal("quota_exhausted");
+      }
+
+      return;
+    }
+
+    trackEvent(nextButton.dataset.analyticsEvent, {
+      style: activeStyle,
+      previousPraiseId: previousItem?.id,
+      previousPraiseText: previousItem?.praise,
+      previousMusicTitle: previousItem?.musicTitle,
+      nextStyleIndex: nextItem.styleIndex,
+      consumedFrom: quotaResult.consumedFrom,
+      freeRemaining: quotaResult.freeRemaining,
+      bonusCredits: quotaResult.bonusCredits,
+      paidCredits: quotaResult.paidCredits
+    });
+
+    trackEvent(quotaResult.consumedFrom === "daily_free" ? "free_quota_used" : "bonus_credit_used", {
+      consumedFrom: quotaResult.consumedFrom,
+      freeRemaining: quotaResult.freeRemaining,
+      bonusCredits: quotaResult.bonusCredits,
+      paidCredits: quotaResult.paidCredits
+    });
+
+    renderPraise(nextItem, "next_click");
+  } catch (error) {
+    membershipState.lastError = getErrorMessage(error);
+    updateQuotaUi();
+    trackEvent("quota_consume_failed", {
+      reason: membershipState.lastError,
+      isLoggedIn: membershipState.isLoggedIn
+    });
+  } finally {
+    setNextLoading(false);
+    updateQuotaUi();
+  }
+}
+
+nextButton.addEventListener("click", handleNextPraise);
 
 styleButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -376,13 +840,73 @@ musicButton.addEventListener("click", () => {
   });
 });
 
-function initApp() {
+loginButton.addEventListener("click", () => {
+  if (membershipState.isLoggedIn) {
+    return;
+  }
+
+  trackEvent(loginButton.dataset.analyticsEvent, {
+    freeRemaining: membershipState.quota?.freeRemaining ?? 0
+  });
+  openLoginModal("login_button");
+});
+
+loginModal.addEventListener("click", (event) => {
+  if (event.target.closest("[data-close-login]")) {
+    closeLoginModal("close_button");
+  }
+});
+
+phoneInput.addEventListener("input", () => {
+  phoneInput.value = normalizeMainlandPhone(phoneInput.value);
+});
+
+codeInput.addEventListener("input", () => {
+  codeInput.value = codeInput.value.replace(/\D/g, "").slice(0, 8);
+});
+
+sendCodeButton.addEventListener("click", async () => {
+  sendCodeButton.disabled = true;
+  setLoginMessage("正在发送验证码...");
+
+  try {
+    await requestSmsCode();
+    setLoginMessage("验证码已发送，请查看手机短信。", true);
+  } catch (error) {
+    const message = getErrorMessage(error);
+    setLoginMessage(message);
+    trackEvent("sms_code_request_failed", { reason: message });
+  } finally {
+    sendCodeButton.disabled = false;
+  }
+});
+
+loginForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  loginSubmitButton.disabled = true;
+  setLoginMessage("正在登录...");
+
+  try {
+    await completePhoneLogin();
+    setLoginMessage("登录成功", true);
+  } catch (error) {
+    const message = getErrorMessage(error);
+    setLoginMessage(message);
+    trackEvent("phone_login_failed", { reason: message, loginMethod: "phone" });
+  } finally {
+    loginSubmitButton.disabled = false;
+  }
+});
+
+async function initApp() {
   setTodayLabel();
   trackEvent("page_view", {
     dateKey: getDateKey()
   });
   renderPraise(getDailyItem(), "daily_default");
   updateMusicButton();
+  updateQuotaUi();
+  await initMembership();
 }
 
 initApp();
