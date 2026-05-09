@@ -366,11 +366,12 @@ V2.0.1 暂不真实支付，只预留。
 
 ### Step 1: Request SMS Code
 
-用户输入手机号后，请求验证码。
+用户输入手机号后，请求验证码。前端默认先走登录验证码；如果 CloudBase 返回手机号未注册，则自动切换为注册流程，并提示用户重新获取注册验证码。
 
 前端事件：
 
 - `phone_login_start`
+- `phone_register_start`
 - `sms_code_request`
 
 错误情况：
@@ -379,22 +380,26 @@ V2.0.1 暂不真实支付，只预留。
 - 发送过于频繁
 - 短信服务额度不足
 - CloudBase 环境地域不是上海
+- 手机号未注册时自动切换注册流程
 
 ### Step 2: Verify Code and Login
 
-用户输入验证码后完成登录。
+用户输入验证码后完成登录或注册。
 
 成功后：
 
+- 注册模式下先完成手机号注册
 - 调用 `grantLoginBonus`
 - 调用 `getQuotaStatus`
 - 关闭登录弹窗
 - 发送 `phone_login_success`
+- 注册成功时发送 `phone_register_success`
 
 失败后：
 
 - 展示验证码错误提示
 - 发送 `phone_login_failed`
+- 注册失败时发送 `phone_register_failed`
 
 ## Quota Flow
 
@@ -466,6 +471,9 @@ V2.0.1 暂不真实支付，只预留。
 - `login_prompt_view`
 - `login_prompt_close`
 - `phone_login_start`
+- `phone_register_start`
+- `phone_register_success`
+- `phone_register_failed`
 - `sms_code_request`
 - `sms_code_request_success`
 - `sms_code_request_failed`

@@ -539,6 +539,7 @@ h1 {
 .music-button:focus-visible,
 .login-button:focus-visible,
 .code-button:focus-visible,
+.auth-mode-button:focus-visible,
 .login-submit:focus-visible,
 .modal-close:focus-visible {
   outline: 3px solid rgba(236, 141, 112, 0.42);
@@ -615,6 +616,18 @@ h1 {
   color: var(--muted);
   line-height: 1.62;
   font-size: 14px;
+}
+
+.auth-mode-button {
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+  color: #3f715c;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
 }
 
 .login-form {

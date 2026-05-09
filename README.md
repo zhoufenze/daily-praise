@@ -9,7 +9,7 @@
 - 四种赞美风格：温暖、专业、幽默、高情商
 - 点击 `换一句` 后同步切换赞美和音乐
 - 接入 CloudBase 轻会员次数：未登录每天免费 3 次，登录后可领取额外次数
-- 手机号验证码登录入口
+- 手机号验证码登录 / 注册入口，首次注册后赠送额外次数
 - 音乐由用户点击后播放，符合浏览器播放限制
 - 响应式桌面和移动端布局
 - PostHog 事件埋点，支持后续观察点击率和使用行为
@@ -51,6 +51,7 @@ V2 当前发送：
 - `quota_exhausted`
 - `login_button_click`
 - `sms_code_request`
+- `phone_register_success`
 - `phone_login_success`
 
 详细指标设计见 `analytics-plan.md`。

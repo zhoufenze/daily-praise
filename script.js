@@ -120,6 +120,9 @@ const quotaPill = document.querySelector("#quotaPill");
 const loginButton = document.querySelector("#loginButton");
 const loginModal = document.querySelector("#loginModal");
 const loginForm = document.querySelector("#loginForm");
+const loginTitle = document.querySelector("#loginTitle");
+const loginDescription = document.querySelector("#loginDescription");
+const authModeButton = document.querySelector("#authModeButton");
 const phoneInput = document.querySelector("#phoneInput");
 const codeInput = document.querySelector("#codeInput");
 const sendCodeButton = document.querySelector("#sendCodeButton");
@@ -138,6 +141,8 @@ const membershipState = {
   isLoggedIn: false,
   quota: null,
   otpVerifier: null,
+  authMode: "login",
+  otpMode: "login",
   lastError: "",
   localFallback: false
 };
@@ -637,6 +642,7 @@ async function consumeQuotaBeforeNext() {
 
 function openLoginModal(reason = "manual") {
   loginModal.hidden = false;
+  setAuthMode("login");
   loginMessage.textContent = "";
   loginMessage.classList.remove("is-success");
   setTimeout(() => phoneInput.focus(), 0);
@@ -655,6 +661,62 @@ function setLoginMessage(message, isSuccess = false) {
   loginMessage.textContent = message;
   loginMessage.classList.toggle("is-success", isSuccess);
 }
+
+function setAuthMode(mode, message = "") {
+  const isRegister = mode === "register";
+
+  membershipState.authMode = isRegister ? "register" : "login";
+  membershipState.otpVerifier = null;
+  membershipState.otpMode = membershipState.authMode;
+  codeInput.value = "";
+
+  loginTitle.textContent = isRegister ? "注册后继续被夸" : "登录后继续被夸";
+  loginDescription.textContent = isRegister
+    ? "首次使用手机号注册，注册成功后会自动登录，并额外获得 10 次夸夸次数。"
+    : "已注册手机号可直接登录。首次使用请先注册，注册后会额外获得 10 次夸夸次数。";
+  authModeButton.textContent = isRegister ? "已有账号？切换到登录" : "首次使用？切换到注册";
+  sendCodeButton.textContent = isRegister ? "获取注册验证码" : "获取验证码";
+  loginSubmitButton.textContent = isRegister ? "注册并登录" : "登录";
+
+  if (message) {
+    setLoginMessage(message);
+  }
+
+  trackEvent("auth_mode_change", { authMode: membershipState.authMode });
+}
+
+function isUserNotFoundError(message) {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("user not exist") ||
+    normalized.includes("user does not exist") ||
+    normalized.includes("not found") ||
+    message.includes("用户不存在") ||
+    message.includes("用户未注册")
+  );
+}
+
+function isUserExistsError(message) {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("user already exist") ||
+    normalized.includes("user exists") ||
+    normalized.includes("already registered") ||
+    message.includes("用户已存在") ||
+    message.includes("已注册")
+  );
+}
+
+function switchToRegisterAfterUserNotFound() {
+  setAuthMode("register", "这个手机号还没有注册。请在注册模式下重新获取验证码。");
+  trackEvent("phone_login_user_not_found", { loginMethod: "phone" });
+}
+
+function switchToLoginAfterUserExists() {
+  setAuthMode("login", "这个手机号已经注册过了。请在登录模式下重新获取验证码。");
+  trackEvent("phone_register_user_exists", { loginMethod: "phone" });
+}
+
 
 function normalizeMainlandPhone(value) {
   return value.replace(/\D/g, "").slice(0, 11);
@@ -697,26 +759,30 @@ function getErrorMessage(error) {
 }
 
 async function requestSmsCode() {
-  if (!membershipState.auth?.signInWithOtp) {
+  const isRegister = membershipState.authMode === "register";
+  const requestMethod = isRegister ? membershipState.auth?.signUp : membershipState.auth?.signInWithOtp;
+
+  if (!requestMethod) {
     throw new Error("当前页面暂时无法发送验证码，请确认 CloudBase SDK 已加载");
   }
 
   const phone = getPhoneForCloudBase();
-  trackEvent("sms_code_request", { loginMethod: "phone" });
+  trackEvent("sms_code_request", { loginMethod: "phone", authMode: membershipState.authMode });
 
-  const result = await membershipState.auth.signInWithOtp({ phone });
+  const result = await requestMethod.call(membershipState.auth, { phone });
 
   if (result?.error) {
     throw result.error;
   }
 
   membershipState.otpVerifier = result?.data?.verifyOtp;
+  membershipState.otpMode = membershipState.authMode;
 
   if (typeof membershipState.otpVerifier !== "function") {
-    throw new Error("验证码发送成功，但登录校验器未返回");
+    throw new Error("验证码发送成功，但校验器未返回");
   }
 
-  trackEvent("sms_code_request_success", { loginMethod: "phone" });
+  trackEvent("sms_code_request_success", { loginMethod: "phone", authMode: membershipState.authMode });
 }
 
 async function completePhoneLogin() {
@@ -726,7 +792,12 @@ async function completePhoneLogin() {
     throw new Error("请先获取验证码");
   }
 
-  trackEvent("phone_login_start", { loginMethod: "phone" });
+  const authMode = membershipState.otpMode || membershipState.authMode;
+
+  trackEvent(authMode === "register" ? "phone_register_start" : "phone_login_start", {
+    loginMethod: "phone",
+    authMode
+  });
   const result = await membershipState.otpVerifier({ token: code });
 
   if (result?.error) {
@@ -742,8 +813,11 @@ async function completePhoneLogin() {
   });
 
   await refreshQuotaStatus();
-  closeLoginModal("login_success");
-  trackEvent("phone_login_success", { loginMethod: "phone" });
+  closeLoginModal(authMode === "register" ? "register_success" : "login_success");
+  trackEvent(authMode === "register" ? "phone_register_success" : "phone_login_success", {
+    loginMethod: "phone",
+    authMode
+  });
 }
 
 async function handleNextPraise() {
@@ -867,15 +941,27 @@ codeInput.addEventListener("input", () => {
 
 sendCodeButton.addEventListener("click", async () => {
   sendCodeButton.disabled = true;
-  setLoginMessage("正在发送验证码...");
+  setLoginMessage(membershipState.authMode === "register" ? "正在发送注册验证码..." : "正在发送验证码...");
 
   try {
     await requestSmsCode();
     setLoginMessage("验证码已发送，请查看手机短信。", true);
   } catch (error) {
     const message = getErrorMessage(error);
-    setLoginMessage(message);
-    trackEvent("sms_code_request_failed", { reason: message });
+    const failedMode = membershipState.authMode;
+
+    if (membershipState.authMode === "login" && isUserNotFoundError(message)) {
+      switchToRegisterAfterUserNotFound();
+    } else if (membershipState.authMode === "register" && isUserExistsError(message)) {
+      switchToLoginAfterUserExists();
+    } else {
+      setLoginMessage(message);
+    }
+
+    trackEvent("sms_code_request_failed", {
+      reason: message,
+      authMode: failedMode
+    });
   } finally {
     sendCodeButton.disabled = false;
   }
@@ -884,18 +970,37 @@ sendCodeButton.addEventListener("click", async () => {
 loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   loginSubmitButton.disabled = true;
-  setLoginMessage("正在登录...");
+  setLoginMessage(membershipState.otpMode === "register" ? "正在注册并登录..." : "正在登录...");
 
   try {
     await completePhoneLogin();
-    setLoginMessage("登录成功", true);
+    setLoginMessage(membershipState.otpMode === "register" ? "注册成功" : "登录成功", true);
   } catch (error) {
     const message = getErrorMessage(error);
-    setLoginMessage(message);
-    trackEvent("phone_login_failed", { reason: message, loginMethod: "phone" });
+    const failedMode = membershipState.otpMode;
+
+    if (failedMode === "login" && isUserNotFoundError(message)) {
+      switchToRegisterAfterUserNotFound();
+    } else if (failedMode === "register" && isUserExistsError(message)) {
+      switchToLoginAfterUserExists();
+    } else {
+      setLoginMessage(message);
+    }
+
+    trackEvent(failedMode === "register" ? "phone_register_failed" : "phone_login_failed", {
+      reason: message,
+      loginMethod: "phone",
+      authMode: failedMode
+    });
   } finally {
     loginSubmitButton.disabled = false;
   }
+});
+
+authModeButton.addEventListener("click", () => {
+  const nextMode = membershipState.authMode === "register" ? "login" : "register";
+  setAuthMode(nextMode);
+  setLoginMessage("");
 });
 
 async function initApp() {
