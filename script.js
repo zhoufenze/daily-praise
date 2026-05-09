@@ -648,6 +648,7 @@ async function consumeQuotaBeforeNext() {
 
 function openLoginModal(reason = "manual") {
   loginModal.hidden = false;
+  loginModal.classList.add("is-open");
   setAuthMode("login");
   loginMessage.textContent = "";
   loginMessage.classList.remove("is-success");
@@ -659,6 +660,7 @@ function openLoginModal(reason = "manual") {
 }
 
 function closeLoginModal(reason = "manual") {
+  loginModal.classList.remove("is-open");
   loginModal.hidden = true;
   trackEvent("login_prompt_close", { reason });
 }
@@ -764,6 +766,23 @@ function getErrorMessage(error) {
   return error.message || error.error_description || "操作失败，请稍后再试";
 }
 
+function delay(ms) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+function withTimeout(promise, ms, timeoutMessage) {
+  let timer = 0;
+  const timeout = new Promise((_, reject) => {
+    timer = window.setTimeout(() => reject(new Error(timeoutMessage)), ms);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => {
+    window.clearTimeout(timer);
+  });
+}
+
 async function requestSmsCode() {
   if (!membershipState.auth?.signInWithOtp) {
     throw new Error("当前页面暂时无法发送验证码，请确认 CloudBase SDK 已加载");
@@ -811,14 +830,35 @@ async function completePhoneLogin() {
   }
 
   membershipState.isLoggedIn = true;
+  setLoginMessage("验证码通过，正在领取夸夸次数...", true);
 
-  const bonusResult = await callCloudFunction("grantLoginBonus", {});
+  const bonusResult = await withTimeout(
+    callCloudFunction("grantLoginBonus", {}),
+    8000,
+    "登录成功，但领取次数超时了，请稍后重试"
+  );
+
+  if (bonusResult?.ok === false) {
+    throw new Error(bonusResult.reason || "登录成功，但领取次数失败，请稍后重试");
+  }
+
   trackEvent("login_bonus_granted", {
     granted: bonusResult?.granted,
     bonusCredits: bonusResult?.bonusCredits
   });
 
-  await refreshQuotaStatus();
+  const quota = await withTimeout(
+    refreshQuotaStatus(),
+    8000,
+    "登录成功，但次数同步超时了，请刷新页面重试"
+  );
+
+  if (!quota.isLoggedIn) {
+    throw new Error("登录状态还没有同步成功，请刷新页面后重试");
+  }
+
+  setLoginMessage("登录成功，已领取夸夸次数。", true);
+  await delay(650);
   closeLoginModal(authMode === "register" ? "register_success" : "login_success");
   trackEvent(authMode === "register" ? "phone_register_success" : "phone_login_success", {
     loginMethod: "phone",
@@ -980,7 +1020,6 @@ loginForm.addEventListener("submit", async (event) => {
 
   try {
     await completePhoneLogin();
-    setLoginMessage(membershipState.otpMode === "register" ? "注册成功" : "登录成功", true);
   } catch (error) {
     const message = getErrorMessage(error);
     const failedMode = membershipState.otpMode;

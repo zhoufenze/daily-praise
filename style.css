@@ -550,6 +550,10 @@ h1 {
   display: none;
 }
 
+.login-modal:not(.is-open) {
+  display: none;
+}
+
 .login-modal {
   position: fixed;
   inset: 0;
