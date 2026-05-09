@@ -480,9 +480,15 @@ function consumeLocalQuota() {
 function getCloudbaseOptions() {
   const config = getMembershipConfig();
   const options = { env: config.envId };
+  const publishableKey = config.publishableKey || config.accessKey;
 
-  if (config.publishableKey) {
-    options.clientId = config.publishableKey;
+  if (config.region) {
+    options.region = config.region;
+  }
+
+  if (publishableKey) {
+    options.accessKey = publishableKey;
+    options.clientId = publishableKey;
   }
 
   return options;
@@ -759,17 +765,17 @@ function getErrorMessage(error) {
 }
 
 async function requestSmsCode() {
-  const isRegister = membershipState.authMode === "register";
-  const requestMethod = isRegister ? membershipState.auth?.signUp : membershipState.auth?.signInWithOtp;
-
-  if (!requestMethod) {
+  if (!membershipState.auth?.signInWithOtp) {
     throw new Error("当前页面暂时无法发送验证码，请确认 CloudBase SDK 已加载");
   }
 
   const phone = getPhoneForCloudBase();
   trackEvent("sms_code_request", { loginMethod: "phone", authMode: membershipState.authMode });
 
-  const result = await requestMethod.call(membershipState.auth, { phone });
+  const result = await membershipState.auth.signInWithOtp({
+    phone,
+    shouldCreateUser: true
+  });
 
   if (result?.error) {
     throw result.error;

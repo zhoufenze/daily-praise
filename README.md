@@ -29,10 +29,12 @@ CloudBase SDK 会在页面内容先渲染完成后再加载，避免外部脚本
 当前 CloudBase 环境：
 
 - 环境 ID：`kuakua-d6gh7a5yqca535d62`
+- 地域：上海 `ap-shanghai`
+- 客户端 Publishable Key：生成后填写到 `membership-config.js` 的 `publishableKey`
 - 云函数：`getQuotaStatus`、`consumePraiseCredit`、`grantLoginBonus`
 - 数据库集合：`users_profile`、`user_balances`、`daily_usage`、`credit_transactions`、`orders`
 
-不要把服务端 API Key、SecretId、SecretKey 放进前端文件。
+不要把服务端 API Key、SecretId、SecretKey 放进前端文件。Publishable Key 是客户端公开 Key，可以放在前端配置中。
 
 ## Analytics Events
 

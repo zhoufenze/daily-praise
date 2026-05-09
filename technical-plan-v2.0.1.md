@@ -366,7 +366,7 @@ V2.0.1 暂不真实支付，只预留。
 
 ### Step 1: Request SMS Code
 
-用户输入手机号后，请求验证码。前端默认先走登录验证码；如果 CloudBase 返回手机号未注册，则自动切换为注册流程，并提示用户重新获取注册验证码。
+用户输入手机号后，请求验证码。前端统一使用 CloudBase 手机号验证码登录接口，并显式开启 `shouldCreateUser`，让未注册手机号在验证码校验成功后自动创建用户。
 
 前端事件：
 
@@ -380,7 +380,7 @@ V2.0.1 暂不真实支付，只预留。
 - 发送过于频繁
 - 短信服务额度不足
 - CloudBase 环境地域不是上海
-- 手机号未注册时自动切换注册流程
+- 手机号未注册时由验证码登录接口自动创建用户
 
 ### Step 2: Verify Code and Login
 
@@ -542,7 +542,9 @@ V2.0.1 暂不真实支付，只预留。
 window.KUAKUA_MEMBERSHIP = {
   cloudbase: {
     enabled: true,
-    envId: "kuakua-d6gh7a5yqca535d62"
+    envId: "kuakua-d6gh7a5yqca535d62",
+    region: "ap-shanghai",
+    publishableKey: ""
   }
 };
 ```
@@ -550,8 +552,8 @@ window.KUAKUA_MEMBERSHIP = {
 说明：
 
 - `envId` 是公开环境标识，可以放在前端。
+- `publishableKey` 是 CloudBase 客户端公开 Key，生成后填入前端配置。
 - 不要在前端放服务端 API Key、SecretId、SecretKey。
-- 如果后续 CloudBase 要求配置客户端 Publishable Key，再补充到 `membership-config.js`。
 
 ### 4. Testing
 
