@@ -604,8 +604,34 @@ async function callCloudFunction(name, data = {}) {
     throw new Error("CloudBase 未初始化");
   }
 
-  const response = await membershipState.app.callFunction({ name, data });
-  return response?.result || response;
+  try {
+    const response = await membershipState.app.callFunction({ name, data, parse: true });
+
+    if (response?.code) {
+      const message = response.message || response.code;
+      const requestId = response.requestId ? `，请求 ID：${response.requestId}` : "";
+      throw new Error(`${message}${requestId}`);
+    }
+
+    const result = response?.result ?? response;
+
+    if (typeof result === "string") {
+      try {
+        return JSON.parse(result);
+      } catch (error) {
+        return result;
+      }
+    }
+
+    return result;
+  } catch (error) {
+    console.error(`[夸夸] 云函数 ${name} 调用失败`, {
+      name,
+      data,
+      error
+    });
+    throw error;
+  }
 }
 
 async function refreshQuotaStatus() {
