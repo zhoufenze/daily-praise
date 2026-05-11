@@ -932,6 +932,14 @@ function getQuotaBlockMessage(result = {}) {
     return "登录状态已失效，请重新登录。";
   }
 
+  if (reason.includes("document with the same _id") || reason.includes("already exists")) {
+    return "次数记录正在修复中，请刷新页面后再试。";
+  }
+
+  if (reason && reason !== "quota_exhausted") {
+    return `次数同步失败：${reason}`;
+  }
+
   return "暂时无法换一句，请稍后重试。";
 }
 
@@ -1100,12 +1108,10 @@ async function handleNextPraise() {
   } catch (error) {
     membershipState.lastError = getErrorMessage(error);
     updateQuotaUi();
-    showStatusToast(
-      membershipState.isLoggedIn
-        ? "次数同步失败，请稍后重试或刷新页面。"
-        : "暂时无法同步次数，已切换为本地免费次数。",
-      "error"
-    );
+    const failMessage = membershipState.isLoggedIn
+      ? getQuotaBlockMessage({ reason: membershipState.lastError })
+      : "暂时无法同步次数，已切换为本地免费次数。";
+    showStatusToast(failMessage, "error");
     trackEvent("quota_consume_failed", {
       reason: membershipState.lastError,
       isLoggedIn: membershipState.isLoggedIn
