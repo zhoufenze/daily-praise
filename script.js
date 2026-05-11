@@ -398,13 +398,17 @@ function saveCachedQuota(quota) {
     return;
   }
 
-  window.localStorage.setItem(
-    getQuotaCacheKey(),
-    JSON.stringify({
-      ...quota,
-      cachedAt: new Date().toISOString()
-    })
-  );
+  try {
+    window.localStorage.setItem(
+      getQuotaCacheKey(),
+      JSON.stringify({
+        ...quota,
+        cachedAt: new Date().toISOString()
+      })
+    );
+  } catch (error) {
+    console.warn("[夸夸] 次数缓存保存失败", error);
+  }
 }
 
 function getCachedQuota() {
@@ -466,7 +470,7 @@ function consumeCachedQuota() {
 }
 
 function buildPostLoginFallbackQuota(bonusResult) {
-  if (!bonusResult || bonusResult.ok === false) {
+  if (bonusResult?.ok === false) {
     return null;
   }
 
@@ -668,6 +672,10 @@ async function initMembership() {
       membershipState.localFallback = true;
       membershipState.lastError = "";
       membershipState.quota = getLocalQuota();
+    } else {
+      membershipState.quota = getCachedQuota() || buildPostLoginFallbackQuota(null);
+      membershipState.lastError = membershipState.quota ? "" : membershipState.lastError;
+      saveCachedQuota(membershipState.quota);
     }
 
     membershipState.initialized = true;
@@ -1159,6 +1167,17 @@ async function completePhoneLogin() {
 
   membershipState.isLoggedIn = true;
   membershipState.localFallback = false;
+  closeLoginModal(authMode === "register" ? "register_auth_success" : "login_auth_success");
+
+  const initialFallbackQuota = buildPostLoginFallbackQuota(null);
+
+  if (initialFallbackQuota) {
+    membershipState.quota = initialFallbackQuota;
+    membershipState.initialized = true;
+    membershipState.lastError = "";
+    saveCachedQuota(initialFallbackQuota);
+  }
+
   updateQuotaUi();
   showStatusToast(authMode === "register" ? "注册成功，已登录。" : "登录成功，可以继续被夸了。", "success");
   trackEvent(authMode === "register" ? "phone_register_success" : "phone_login_success", {
