@@ -913,6 +913,28 @@ function getErrorMessage(error) {
   return getSafeMessage(error.message || error.error_description || "操作失败，请稍后再试");
 }
 
+function getQuotaBlockMessage(result = {}) {
+  const reason = result.reason || "";
+
+  if (reason === "guest_quota_exhausted") {
+    return "今天的免费次数已用完，登录后可以继续被夸。";
+  }
+
+  if (reason === "quota_exhausted") {
+    return "当前次数已用完，后续可以通过会员充值继续使用。";
+  }
+
+  if (reason === "missing_anonymous_id") {
+    return "暂时无法识别当前设备，请刷新页面后重试。";
+  }
+
+  if (reason === "login_required") {
+    return "登录状态已失效，请重新登录。";
+  }
+
+  return "暂时无法换一句，请稍后重试。";
+}
+
 function delay(ms) {
   return new Promise((resolve) => {
     window.setTimeout(resolve, ms);
@@ -1037,6 +1059,8 @@ async function handleNextPraise() {
     const quotaResult = await consumeQuotaBeforeNext();
 
     if (!quotaResult.allowed) {
+      const blockMessage = getQuotaBlockMessage(quotaResult);
+
       trackEvent("quota_exhausted", {
         reason: quotaResult.reason,
         isLoggedIn: membershipState.isLoggedIn,
@@ -1049,6 +1073,7 @@ async function handleNextPraise() {
         openLoginModal("quota_exhausted");
       }
 
+      showStatusToast(blockMessage, "error");
       return;
     }
 
