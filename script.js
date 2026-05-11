@@ -411,7 +411,7 @@ function updateQuotaUi() {
   nextButton.disabled = isNextLoading || Boolean(quota && !quota.canChangePraise);
 
   if (membershipState.lastError && !quota) {
-    quotaPill.textContent = membershipState.isLoggedIn ? "次数同步中" : "次数暂不可用";
+    quotaPill.textContent = membershipState.isLoggedIn ? "次数待同步" : "今日还可换 3 次";
     loginButton.textContent = membershipState.isLoggedIn ? "退出" : "登录";
     loginButton.disabled = false;
     return;
@@ -567,7 +567,7 @@ async function initMembership() {
   } catch (error) {
     membershipState.lastError = getErrorMessage(error);
 
-    if (isLocalPreview()) {
+    if (isLocalPreview() || !membershipState.isLoggedIn) {
       membershipState.localFallback = true;
       membershipState.lastError = "";
       membershipState.quota = getLocalQuota();
@@ -645,11 +645,29 @@ async function consumeQuotaBeforeNext() {
     return result;
   }
 
-  const result = await callCloudFunction("consumePraiseCredit", {
-    anonymousId: getDistinctId(),
-    dateKey: getDateKey(),
-    currentPraiseId: activeItem?.id || ""
-  });
+  let result;
+
+  try {
+    result = await callCloudFunction("consumePraiseCredit", {
+      anonymousId: getDistinctId(),
+      dateKey: getDateKey(),
+      currentPraiseId: activeItem?.id || ""
+    });
+  } catch (error) {
+    if (!membershipState.isLoggedIn) {
+      membershipState.localFallback = true;
+      const fallbackResult = consumeLocalQuota();
+      membershipState.quota = normalizeQuota(fallbackResult);
+      updateQuotaUi();
+      trackEvent("quota_consume_local_fallback", {
+        reason: getErrorMessage(error),
+        freeRemaining: membershipState.quota.freeRemaining
+      });
+      return fallbackResult;
+    }
+
+    throw error;
+  }
 
   const nextQuota = normalizeQuota(result);
   membershipState.quota = nextQuota;
@@ -962,6 +980,7 @@ async function completePhoneLogin() {
   }
 
   membershipState.isLoggedIn = true;
+  membershipState.localFallback = false;
   updateQuotaUi();
   closeLoginModal(authMode === "register" ? "register_auth_success" : "login_auth_success");
   showStatusToast(authMode === "register" ? "注册成功，已登录。" : "登录成功，可以继续被夸了。", "success");
@@ -1056,6 +1075,12 @@ async function handleNextPraise() {
   } catch (error) {
     membershipState.lastError = getErrorMessage(error);
     updateQuotaUi();
+    showStatusToast(
+      membershipState.isLoggedIn
+        ? "次数同步失败，请稍后重试或刷新页面。"
+        : "暂时无法同步次数，已切换为本地免费次数。",
+      "error"
+    );
     trackEvent("quota_consume_failed", {
       reason: membershipState.lastError,
       isLoggedIn: membershipState.isLoggedIn
