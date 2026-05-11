@@ -484,7 +484,7 @@ function buildPostLoginFallbackQuota(bonusResult) {
     freeLimit,
     freeUsed,
     freeRemaining,
-    bonusCredits: Number(bonusResult.bonusCredits ?? previousQuota.bonusCredits ?? 0),
+    bonusCredits: Number(bonusResult?.bonusCredits ?? previousQuota.bonusCredits ?? 0),
     paidCredits: Number(previousQuota.paidCredits ?? 0)
   });
 }
@@ -1223,7 +1223,7 @@ async function completePhoneLogin() {
       membershipState.lastError = "";
       saveCachedQuota(fallbackQuota);
       updateQuotaUi();
-      showLoginSuccessState(authMode, fallbackQuota, bonusResult);
+      showStatusToast(`登录成功，现在还有 ${getTotalRemaining(fallbackQuota)} 次可以使用。`, "success");
       trackEvent("auth_post_login_cache_fallback", {
         reason: message,
         authMode,
