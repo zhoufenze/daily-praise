@@ -674,7 +674,8 @@ async function consumeQuotaBeforeNext() {
   let result;
 
   try {
-    result = await callCloudFunction("consumePraiseCredit", {
+    result = await callCloudFunction("getQuotaStatus", {
+      action: "consume",
       anonymousId: getDistinctId(),
       dateKey: getDateKey(),
       currentPraiseId: activeItem?.id || ""
