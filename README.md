@@ -6,7 +6,7 @@
 
 - 每天默认展示固定的一组内容
 - 中文赞美与本地轻音乐一一绑定
-- 四种赞美风格：温暖、专业、幽默、高情商
+- 四种赞美 / 音乐模式：温暖、专业、幽默、助眠曲
 - 点击 `换一句` 后同步切换赞美和音乐
 - 接入 CloudBase 轻会员次数：未登录每天免费 3 次，登录后可领取额外次数
 - 手机号验证码登录 / 注册入口，首次注册后赠送额外次数
@@ -31,7 +31,7 @@ CloudBase SDK 会在页面内容先渲染完成后再加载，避免外部脚本
 - 环境 ID：`kuakua-d6gh7a5yqca535d62`
 - 地域：上海 `ap-shanghai`
 - 客户端 Publishable Key：生成后填写到 `membership-config.js` 的 `publishableKey`
-- 云函数：`getQuotaStatus`、`consumePraiseCredit`、`grantLoginBonus`
+- 云函数：`getQuotaStatus`、`grantLoginBonus`
 - 数据库集合：`users_profile`、`user_balances`、`daily_usage`、`credit_transactions`、`orders`
 
 不要把服务端 API Key、SecretId、SecretKey 放进前端文件。Publishable Key 是客户端公开 Key，可以放在前端配置中。
@@ -48,6 +48,7 @@ V2 当前发送：
 - `music_pause_click`
 - `music_change`
 - `quota_status_loaded`
+- `quota_status_cache_fallback`
 - `free_quota_used`
 - `bonus_credit_used`
 - `quota_exhausted`
@@ -61,3 +62,5 @@ V2 当前发送：
 ## Music Assets
 
 音乐文件位于 `music/`，版权说明见 `music-credits.md`。
+
+V2.0.2 中，原 `高情商` 模式已改为 `助眠曲`，并接入 `music/sleep-helping.mp3`。

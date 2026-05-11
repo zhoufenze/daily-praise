@@ -78,28 +78,28 @@ const praiseLibrary = {
     ]
   },
   smart: {
-    label: "高情商型",
+    label: "助眠曲",
     items: [
       {
-        id: "smart-spark-01",
-        praise: "你很会照顾别人的感受，而且不会丢掉自己的边界。",
-        musicTitle: "Piano Piano Music",
-        musicMood: "细腻、真诚、适合慢慢被理解",
-        musicFile: "./music/paulyudin-piano-piano-music-508963.mp3"
+        id: "sleep-soft-01",
+        praise: "今天已经很好了，慢慢放松下来，也是一种认真照顾自己。",
+        musicTitle: "Sleep Helping",
+        musicMood: "轻柔、安静、适合睡前放松",
+        musicFile: "./music/sleep-helping.mp3"
       },
       {
-        id: "smart-light-02",
-        praise: "你能听见话里的情绪，这是一种很珍贵的能力。",
-        musicTitle: "Piano Piano Music",
-        musicMood: "细腻、真诚、适合慢慢被理解",
-        musicFile: "./music/paulyudin-piano-piano-music-508963.mp3"
+        id: "sleep-calm-02",
+        praise: "你可以不用一直紧绷，今晚允许自己安稳地休息一下。",
+        musicTitle: "Sleep Helping",
+        musicMood: "轻柔、安静、适合睡前放松",
+        musicFile: "./music/sleep-helping.mp3"
       },
       {
-        id: "smart-confidence-03",
-        praise: "你说话让人舒服，不是因为讨好，而是因为真诚又有尺度。",
-        musicTitle: "Piano Piano Music",
-        musicMood: "细腻、真诚、适合慢慢被理解",
-        musicFile: "./music/paulyudin-piano-piano-music-508963.mp3"
+        id: "sleep-night-03",
+        praise: "你已经完成了今天能完成的部分，剩下的交给明天也没关系。",
+        musicTitle: "Sleep Helping",
+        musicMood: "轻柔、安静、适合睡前放松",
+        musicFile: "./music/sleep-helping.mp3"
       }
     ]
   }
@@ -230,7 +230,7 @@ function capturePostHogEvent(name, properties) {
 function trackEvent(name, details = {}) {
   const payload = {
     event: name,
-    page: "kuakua_v2_0_1",
+    page: "kuakua_v2_0_2",
     timestamp: new Date().toISOString(),
     ...details
   };
@@ -377,6 +377,7 @@ function normalizeQuota(result = {}) {
   return {
     ok: result.ok !== false,
     isLoggedIn: Boolean(result.isLoggedIn),
+    uid: result.uid || "",
     freeLimit: Number(result.freeLimit ?? 3),
     freeUsed: Number(result.freeUsed ?? 0),
     freeRemaining: Number(result.freeRemaining ?? 0),
@@ -386,6 +387,102 @@ function normalizeQuota(result = {}) {
     reason: result.reason || "",
     shouldPromptLogin: Boolean(result.shouldPromptLogin)
   };
+}
+
+function getQuotaCacheKey() {
+  return `kuakua_member_quota_${getDateKey()}`;
+}
+
+function saveCachedQuota(quota) {
+  if (!quota || !membershipState.isLoggedIn) {
+    return;
+  }
+
+  window.localStorage.setItem(
+    getQuotaCacheKey(),
+    JSON.stringify({
+      ...quota,
+      cachedAt: new Date().toISOString()
+    })
+  );
+}
+
+function getCachedQuota() {
+  try {
+    const rawQuota = window.localStorage.getItem(getQuotaCacheKey());
+
+    if (!rawQuota) {
+      return null;
+    }
+
+    const quota = normalizeQuota(JSON.parse(rawQuota));
+    quota.isLoggedIn = true;
+    quota.canChangePraise = getTotalRemaining(quota) > 0;
+    return quota;
+  } catch (error) {
+    return null;
+  }
+}
+
+function consumeCachedQuota() {
+  const quota = getCachedQuota() || membershipState.quota;
+
+  if (!quota || getTotalRemaining(quota) <= 0) {
+    return {
+      ok: true,
+      allowed: false,
+      reason: "quota_exhausted",
+      shouldPromptLogin: false,
+      freeRemaining: 0,
+      bonusCredits: 0,
+      paidCredits: 0,
+      canChangePraise: false
+    };
+  }
+
+  const nextQuota = { ...quota };
+  let consumedFrom = "daily_free";
+
+  if (nextQuota.freeRemaining > 0) {
+    nextQuota.freeRemaining -= 1;
+    nextQuota.freeUsed += 1;
+  } else if (nextQuota.bonusCredits > 0) {
+    nextQuota.bonusCredits -= 1;
+    consumedFrom = "bonus";
+  } else {
+    nextQuota.paidCredits -= 1;
+    consumedFrom = "paid";
+  }
+
+  nextQuota.canChangePraise = getTotalRemaining(nextQuota) > 0;
+  saveCachedQuota(nextQuota);
+
+  return {
+    ok: true,
+    allowed: true,
+    consumedFrom,
+    ...nextQuota
+  };
+}
+
+function buildPostLoginFallbackQuota(bonusResult) {
+  if (!bonusResult || bonusResult.ok === false) {
+    return null;
+  }
+
+  const previousQuota = membershipState.quota || {};
+  const freeLimit = Number(previousQuota.freeLimit ?? 3);
+  const freeRemaining = Math.max(0, Number(previousQuota.freeRemaining ?? freeLimit));
+  const freeUsed = Math.max(0, freeLimit - freeRemaining);
+
+  return normalizeQuota({
+    isLoggedIn: true,
+    freeLimit,
+    freeUsed,
+    freeRemaining,
+    bonusCredits: Number(bonusResult.bonusCredits ?? previousQuota.bonusCredits ?? 0),
+    paidCredits: Number(previousQuota.paidCredits ?? 0)
+  });
 }
 
 function getTotalRemaining(quota = membershipState.quota) {
@@ -642,15 +739,38 @@ async function refreshQuotaStatus() {
     return membershipState.quota;
   }
 
-  const result = await callCloudFunction("getQuotaStatus", {
-    anonymousId: getDistinctId(),
-    dateKey: getDateKey()
-  });
+  let result;
+
+  try {
+    result = await callCloudFunction("getQuotaStatus", {
+      anonymousId: getDistinctId(),
+      dateKey: getDateKey()
+    });
+  } catch (error) {
+    const cachedQuota = membershipState.isLoggedIn ? getCachedQuota() : null;
+
+    if (cachedQuota) {
+      membershipState.quota = cachedQuota;
+      membershipState.initialized = true;
+      membershipState.lastError = "";
+      updateQuotaUi();
+      trackEvent("quota_status_cache_fallback", {
+        reason: getErrorMessage(error),
+        freeRemaining: cachedQuota.freeRemaining,
+        bonusCredits: cachedQuota.bonusCredits,
+        paidCredits: cachedQuota.paidCredits
+      });
+      return membershipState.quota;
+    }
+
+    throw error;
+  }
 
   membershipState.quota = normalizeQuota(result);
   membershipState.isLoggedIn = membershipState.quota.isLoggedIn;
   membershipState.initialized = true;
   membershipState.lastError = "";
+  saveCachedQuota(membershipState.quota);
   updateQuotaUi();
   trackEvent("quota_status_loaded", {
     isLoggedIn: membershipState.isLoggedIn,
@@ -698,6 +818,7 @@ async function consumeQuotaBeforeNext() {
 
   const nextQuota = normalizeQuota(result);
   membershipState.quota = nextQuota;
+  saveCachedQuota(membershipState.quota);
   updateQuotaUi();
   return { ...result, ...nextQuota };
 }
@@ -1039,15 +1160,16 @@ async function completePhoneLogin() {
   membershipState.isLoggedIn = true;
   membershipState.localFallback = false;
   updateQuotaUi();
-  closeLoginModal(authMode === "register" ? "register_auth_success" : "login_auth_success");
   showStatusToast(authMode === "register" ? "注册成功，已登录。" : "登录成功，可以继续被夸了。", "success");
   trackEvent(authMode === "register" ? "phone_register_success" : "phone_login_success", {
     loginMethod: "phone",
     authMode
   });
 
+  let bonusResult = null;
+
   try {
-    const bonusResult = await withTimeout(
+    bonusResult = await withTimeout(
       callCloudFunction("grantLoginBonus", {}),
       8000,
       "登录成功，但领取次数同步较慢"
@@ -1069,11 +1191,31 @@ async function completePhoneLogin() {
     );
 
     if (quota.isLoggedIn) {
-      showStatusToast(`登录成功，现在还有 ${getTotalRemaining(quota)} 次可以使用。`, "success");
+      showLoginSuccessState(authMode, quota, bonusResult);
+      return;
     }
   } catch (error) {
     const message = getErrorMessage(error);
-    showStatusToast("登录成功，次数同步可能稍有延迟，请刷新页面查看。", "success");
+    const fallbackQuota = buildPostLoginFallbackQuota(bonusResult);
+
+    if (fallbackQuota) {
+      membershipState.quota = fallbackQuota;
+      membershipState.initialized = true;
+      membershipState.lastError = "";
+      saveCachedQuota(fallbackQuota);
+      updateQuotaUi();
+      showLoginSuccessState(authMode, fallbackQuota, bonusResult);
+      trackEvent("auth_post_login_cache_fallback", {
+        reason: message,
+        authMode,
+        freeRemaining: fallbackQuota.freeRemaining,
+        bonusCredits: fallbackQuota.bonusCredits,
+        paidCredits: fallbackQuota.paidCredits
+      });
+      return;
+    }
+
+    showStatusToast("登录成功，次数同步可能稍有延迟，请稍后刷新页面查看。", "success");
     trackEvent("auth_post_login_sync_failed", {
       reason: message,
       authMode

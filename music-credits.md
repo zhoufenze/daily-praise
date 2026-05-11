@@ -60,6 +60,19 @@ Last Updated: 2026-05-09
 
 ---
 
+## 5. Sleep Helping
+
+- Title: Sleep Helping
+- Artist: User-provided
+- Source: User-provided file
+- License: Confirm before public distribution
+- Commercial Use: Confirm before public distribution
+- Attribution Required: Confirm before public distribution
+- Download Date: 2026-05-11
+- Local File: `music/sleep-helping.mp3`
+
+---
+
 # License Notes
 
 All tracks above were sourced from Pixabay Music and are generally available under the Pixabay Content License.
@@ -79,4 +92,4 @@ https://pixabay.com/service/license-summary/
 - 温暖: Nostalgic Piano
 - 专业: Piano Moment
 - 幽默: Nostalgic
-- 高情商: Piano Piano Music
+- 助眠曲: Sleep Helping
