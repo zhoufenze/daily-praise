@@ -1034,6 +1034,15 @@ function getSafeMessage(message) {
     return "验证码发送太频繁了，请 1 分钟后再试。";
   }
 
+  if (
+    normalized.includes("verification code does not match") ||
+    normalized.includes("invalidargument") ||
+    normalized.includes("invalid verification code") ||
+    rawMessage.includes("无效的验证码")
+  ) {
+    return "验证码不匹配，请输入最新短信里的验证码；如果重新获取过验证码，请以最后一条短信为准。";
+  }
+
   if (isUserNotFoundError(rawMessage)) {
     return "这个手机号还没有注册，请先切换到注册模式。";
   }
