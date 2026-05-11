@@ -809,16 +809,35 @@ async function consumeQuotaBeforeNext() {
       currentPraiseId: activeItem?.id || ""
     });
   } catch (error) {
+    const reason = getErrorMessage(error);
+
     if (!membershipState.isLoggedIn) {
       membershipState.localFallback = true;
       const fallbackResult = consumeLocalQuota();
       membershipState.quota = normalizeQuota(fallbackResult);
       updateQuotaUi();
       trackEvent("quota_consume_local_fallback", {
-        reason: getErrorMessage(error),
+        reason,
         freeRemaining: membershipState.quota.freeRemaining
       });
       return fallbackResult;
+    }
+
+    const cachedResult = consumeCachedQuota();
+
+    if (cachedResult.allowed) {
+      membershipState.quota = normalizeQuota(cachedResult);
+      membershipState.lastError = "";
+      updateQuotaUi();
+      showStatusToast("云端次数同步较慢，已先使用本地剩余次数。", "success");
+      trackEvent("quota_consume_cache_fallback", {
+        reason,
+        consumedFrom: cachedResult.consumedFrom,
+        freeRemaining: cachedResult.freeRemaining,
+        bonusCredits: cachedResult.bonusCredits,
+        paidCredits: cachedResult.paidCredits
+      });
+      return cachedResult;
     }
 
     throw error;
