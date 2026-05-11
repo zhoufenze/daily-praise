@@ -469,7 +469,7 @@ function consumeCachedQuota() {
   };
 }
 
-function buildPostLoginFallbackQuota(bonusResult) {
+function buildPostLoginFallbackQuota(bonusResult, authMode = "login") {
   if (bonusResult?.ok === false) {
     return null;
   }
@@ -478,13 +478,19 @@ function buildPostLoginFallbackQuota(bonusResult) {
   const freeLimit = Number(previousQuota.freeLimit ?? 3);
   const freeRemaining = Math.max(0, Number(previousQuota.freeRemaining ?? freeLimit));
   const freeUsed = Math.max(0, freeLimit - freeRemaining);
+  const previousBonusCredits = Number(previousQuota.bonusCredits ?? 0);
+  const fallbackBonusCredits = authMode === "register" ? 10 : 0;
+  const bonusCredits =
+    bonusResult?.bonusCredits !== undefined
+      ? Number(bonusResult.bonusCredits)
+      : Math.max(previousBonusCredits, fallbackBonusCredits);
 
   return normalizeQuota({
     isLoggedIn: true,
     freeLimit,
     freeUsed,
     freeRemaining,
-    bonusCredits: Number(bonusResult?.bonusCredits ?? previousQuota.bonusCredits ?? 0),
+    bonusCredits,
     paidCredits: Number(previousQuota.paidCredits ?? 0)
   });
 }
@@ -1197,7 +1203,7 @@ async function completePhoneLogin() {
   membershipState.localFallback = false;
   closeLoginModal(authMode === "register" ? "register_auth_success" : "login_auth_success");
 
-  const initialFallbackQuota = buildPostLoginFallbackQuota(null);
+  const initialFallbackQuota = buildPostLoginFallbackQuota(null, authMode);
 
   if (initialFallbackQuota) {
     membershipState.quota = initialFallbackQuota;
@@ -1243,7 +1249,7 @@ async function completePhoneLogin() {
     }
   } catch (error) {
     const message = getErrorMessage(error);
-    const fallbackQuota = buildPostLoginFallbackQuota(bonusResult);
+    const fallbackQuota = buildPostLoginFallbackQuota(bonusResult, authMode);
 
     if (fallbackQuota) {
       membershipState.quota = fallbackQuota;
